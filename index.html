@@ -3,43 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DigiTailor – Resume Tailoring Platform</title>
+  <title>DigiTailor – Free Local AI Resume Tailoring</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    :root { --brand:#3b82f6; --brand-dark:#2563eb; --ink:#0f172a; --muted:#64748b; --bg:#0b1220; }
-    html,body { height:100%;}
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#0b1220; color:#e5e7eb;}
-    .card { background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); border:1px solid rgba(255,255,255,0.08); border-radius:16px; backdrop-filter: blur(12px); }
-    .glass { background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08); border-radius:14px; }
-    .tag { padding:.25rem .5rem; border-radius:999px; background:rgba(59,130,246,.15); border:1px solid rgba(59,130,246,.35); color:#93c5fd; font-size:.75rem; }
-    .kbd { border:1px solid rgba(255,255,255,.15); border-bottom-width:3px; padding:.1rem .4rem; border-radius:6px; font-size:.75rem; background:rgba(255,255,255,.06);}
-    .meter { height: 12px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
-    .meter > span { display:block; height:100%; background: linear-gradient(90deg, #22c55e, #84cc16); }
-    .pill { border:1px dashed rgba(255,255,255,.18); border-radius:999px; padding:.35rem .65rem; font-size:.8rem; color:#cbd5e1;}
-    .btn { background: var(--brand); color:white; border-radius:12px; padding:.7rem 1rem; font-weight:600; }
-    .btn:hover { background: var(--brand-dark);}
-    .btn-sec { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:.7rem 1rem; font-weight:600; }
-    textarea, input, .selectish {
-      background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:12px; color:#e5e7eb; outline:none;
+    :root { --brand:#3b82f6; --brand-dark:#2563eb; --bg:#0b1220; }
+    html,body { height:100% }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:#e5e7eb }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+            border:1px solid rgba(255,255,255,.08); border-radius:16px; backdrop-filter: blur(12px); }
+    .glass { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); border-radius:14px; }
+    .pill { border:1px dashed rgba(255,255,255,.18); border-radius:999px; padding:.35rem .65rem; font-size:.8rem; color:#cbd5e1; }
+    .btn { background:var(--brand); color:#fff; border-radius:12px; padding:.7rem 1rem; font-weight:700 }
+    .btn:hover { background:var(--brand-dark) }
+    .btn-sec { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:.7rem 1rem; font-weight:600 }
+    textarea, input { background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:12px; color:#e5e7eb; outline:none }
+    textarea:focus, input:focus { border-color: rgba(59,130,246,.6); box-shadow: 0 0 0 4px rgba(59,130,246,.15) }
+    .meter { height:12px; background:rgba(255,255,255,.08); border-radius:999px; overflow:hidden }
+    .meter > span { display:block; height:100%; background:linear-gradient(90deg,#22c55e,#84cc16) }
+    .badge { background:rgba(34,197,94,.12); color:#86efac; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; border:1px solid rgba(34,197,94,.3) }
+    .warn { background:rgba(245,158,11,.12); color:#fde68a; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; border:1px solid rgba(245,158,11,.3) }
+    .danger { background:rgba(239,68,68,.12); color:#fecaca; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; border:1px solid rgba(239,68,68,.3) }
+    .small { font-size:.85rem; color:#94a3b8 }
+    .brand-logo { max-height:56px; height:auto; width:auto; object-fit:contain }
+    .spinner {
+      width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,.25);
+      border-top-color:#93c5fd; animation:spin .9s linear infinite; display:inline-block; vertical-align:middle
     }
-    textarea:focus, input:focus { border-color: rgba(59,130,246,.6); box-shadow: 0 0 0 4px rgba(59,130,246,.15);}
-    .section-title { font-weight:800; letter-spacing:-0.01em;}
-    .mono { font-feature-settings: "ss01" 1; }
-    .grid-auto { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;}
-    .badge { background:rgba(34,197,94,.12); color:#86efac; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; border:1px solid rgba(34,197,94,.3);}
-    .warn { background:rgba(245,158,11,.12); color:#fde68a; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; border:1px solid rgba(245,158,11,.3);}
-    .danger { background:rgba(239,68,68,.12); color:#fecaca; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; border:1px solid rgba(239,68,68,.3);}
-    .linklike { color:#93c5fd; text-decoration: underline dotted; cursor:pointer;}
-    .small { font-size:.85rem; color:#94a3b8;}
-    .hero-img { aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; border:1px solid rgba(255,255,255,.08);}
-    .hero-img img { width:100%; height:100%; object-fit: cover; display:block; filter:saturate(1.1) contrast(1.05);}
-    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;}
-    /* Logo: preserve rectangle ratio */
-    .brand-logo { max-height: 56px; height: auto; width: auto; object-fit: contain; }
+    @keyframes spin { to { transform: rotate(360deg) } }
   </style>
 </head>
 <body>
@@ -49,59 +41,61 @@
         <img src="Logo_Big.png" alt="DigiTailor logo" class="brand-logo">
         <div>
           <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">DigiTailor</h1>
-          <p class="text-slate-400 -mt-1 text-sm">ATS Score • Tailored Resume • LinkedIn Optimization</p>
+          <p class="text-slate-400 -mt-1 text-sm">Free • Local AI • ATS Match • Tailored Resume • LinkedIn Optimization</p>
         </div>
       </div>
-      <div class="hidden md:flex items-center gap-3">
-        <span class="pill">Private • Client‑side</span>
-        <span class="pill">No signup</span>
+      <div class="hidden md:flex items-center gap-2">
+        <span id="aiStatus" class="pill">Local AI: <span class="text-blue-300">loading model…</span> <span class="spinner"></span></span>
       </div>
     </div>
   </header>
 
   <main class="max-w-6xl mx-auto px-5 pb-24">
+    <!-- Intro -->
     <section class="card p-5 md:p-7 mb-8">
       <div class="grid md:grid-cols-2 gap-6 items-center">
         <div>
-          <div class="tag inline-block mb-3">DigiTailor</div>
-          <h2 class="section-title text-3xl md:text-4xl mb-3">Tailor your resume to any job in minutes</h2>
-          <p class="text-slate-300 mb-5">Paste a <strong>Job Description</strong> and your <strong>Resume</strong>. Get an <strong>ATS score</strong>, missing keywords, tailored bullets, and <strong>LinkedIn headline/About</strong> suggestions.</p>
+          <div class="pill inline-block mb-3">100% Free for Students</div>
+          <h2 class="text-3xl md:text-4xl font-extrabold mb-3">Tailor your resume to any job — privately in your browser</h2>
+          <p class="text-slate-300 mb-5">Paste a <strong>Job Description</strong> and your <strong>Resume</strong>. Local AI finds keywords, computes a semantic <strong>ATS score</strong>, suggests tailored bullets, and generates <strong>LinkedIn</strong> headline/About.</p>
           <div class="flex flex-wrap gap-3">
             <button id="demoBtn" class="btn">Load Demo</button>
             <button id="clearBtn" class="btn-sec">Clear All</button>
-            <span class="small">Tip: Press <span class="kbd">Tab</span> to jump between fields</span>
+            <span class="small">First run downloads a small model (~90MB). Then it’s cached.</span>
           </div>
         </div>
-        <div class="hero-img">
-          <img alt="Resume and LinkedIn optimization concept" src="https://images.unsplash.com/photo-1515165562835-c4c7b052f1f4?q=80&w=1600&auto=format&fit=crop">
+        <div class="rounded-xl overflow-hidden border border-white/10">
+          <img src="https://images.unsplash.com/photo-1606761568499-6d2451b23c07?q=80&w=1600&auto=format&fit=crop" alt="Resume workspace">
         </div>
       </div>
     </section>
 
+    <!-- Inputs -->
     <section class="grid md:grid-cols-2 gap-6 mb-8">
       <div class="card p-5 md:p-6">
-        <h3 class="section-title text-xl mb-3">1) Job Description</h3>
+        <h3 class="text-xl font-bold mb-3">1) Job Description</h3>
         <textarea id="jd" class="w-full h-56 p-4" placeholder="Paste the Job Description here…"></textarea>
         <div class="flex items-center justify-between mt-3">
-          <span class="small">We’ll extract skills & keywords automatically.</span>
+          <span class="small">AI will extract role, skills, and priorities.</span>
           <button id="analyzeBtn" class="btn">Analyze</button>
         </div>
       </div>
       <div class="card p-5 md:p-6">
-        <h3 class="section-title text-xl mb-3">2) Your Resume</h3>
+        <h3 class="text-xl font-bold mb-3">2) Your Resume</h3>
         <textarea id="resume" class="w-full h-56 p-4" placeholder="Paste your resume here (text)…"></textarea>
         <div class="flex items-center justify-between mt-3">
           <label class="small flex items-center gap-2">
-            <input id="optimizeTone" type="checkbox" class="accent-blue-500"> Use action‑driven verbs
+            <input id="actionVerbs" type="checkbox" class="accent-blue-500" checked> Prefer strong action verbs
           </label>
           <button id="tailorBtn" class="btn">Tailor to JD</button>
         </div>
       </div>
     </section>
 
+    <!-- AI Results -->
     <section class="grid md:grid-cols-3 gap-6 mb-8">
       <div class="card p-5 md:p-6">
-        <h3 class="section-title text-xl mb-2">ATS Score</h3>
+        <h3 class="text-xl font-bold mb-2">ATS Score (Semantic)</h3>
         <div class="meter mb-2"><span id="atsBar" style="width:0%"></span></div>
         <div class="flex items-center gap-3">
           <div id="atsScore" class="text-3xl font-extrabold">—</div>
@@ -112,33 +106,34 @@
         <p id="atsHint" class="small mt-2"></p>
       </div>
       <div class="card p-5 md:p-6">
-        <h3 class="section-title text-xl mb-2">Missing Keywords</h3>
+        <h3 class="text-xl font-bold mb-2">Missing / Low‑coverage Keywords</h3>
         <div id="missingKeywords" class="flex flex-wrap gap-2"></div>
       </div>
       <div class="card p-5 md:p-6">
-        <h3 class="section-title text-xl mb-2">Recommended Sections</h3>
-        <ul id="recSections" class="list-disc pl-6 text-slate-300 space-y-1">
+        <h3 class="text-xl font-bold mb-2">Recommended Sections</h3>
+        <ul class="list-disc pl-6 text-slate-300 space-y-1">
           <li>Impact bullets with metrics</li>
-          <li>Tech/skills block with JD keywords</li>
+          <li>Skills block with JD keywords</li>
           <li>Role‑specific summary</li>
         </ul>
       </div>
     </section>
 
+    <!-- Tailored outputs -->
     <section class="grid md:grid-cols-2 gap-6 mb-8">
       <div class="card p-5 md:p-6">
-        <h3 class="section-title text-xl mb-3">Tailored Resume Content</h3>
-        <div class="grid-auto">
+        <h3 class="text-xl font-bold mb-3">Tailored Resume Content</h3>
+        <div class="grid md:grid-cols-1 gap-4">
           <div class="glass p-4">
             <h4 class="font-semibold mb-2">Tailored Summary</h4>
-            <textarea id="tailoredSummary" class="w-full h-32 p-3" placeholder="Your tailored summary will appear here…"></textarea>
+            <textarea id="tailoredSummary" class="w-full h-32 p-3" placeholder="Will appear here after Tailor…"></textarea>
             <div class="flex gap-3 mt-2">
               <button class="btn-sec" data-copy="#tailoredSummary">Copy</button>
             </div>
           </div>
           <div class="glass p-4">
             <h4 class="font-semibold mb-2">Tailored Bullets</h4>
-            <textarea id="tailoredBullets" class="w-full h-40 p-3" placeholder="Your tailored bullet points will appear here…"></textarea>
+            <textarea id="tailoredBullets" class="w-full h-40 p-3" placeholder="Will appear here after Tailor…"></textarea>
             <div class="flex gap-3 mt-2">
               <button class="btn-sec" data-copy="#tailoredBullets">Copy</button>
             </div>
@@ -149,8 +144,9 @@
           <span class="small">Edit freely before downloading.</span>
         </div>
       </div>
+
       <div class="card p-5 md:p-6">
-        <h3 class="section-title text-xl mb-3">LinkedIn Optimization</h3>
+        <h3 class="text-xl font-bold mb-3">LinkedIn Optimization</h3>
         <div class="space-y-3">
           <div>
             <label class="small block mb-1">Headline</label>
@@ -174,251 +170,326 @@
     </section>
 
     <section class="card p-5 md:p-6">
-      <h3 class="section-title text-xl mb-3">How it works</h3>
+      <h3 class="text-xl font-bold mb-2">How it works (free & local)</h3>
       <ol class="list-decimal pl-6 text-slate-300 space-y-1">
-        <li>We extract keywords from the JD (role nouns, core skills, tools, certifications).</li>
-        <li>We compare against your resume text for presence, density, and context verbs.</li>
-        <li>We score a simulated ATS match (0–100) and surface gaps + rewrite suggestions.</li>
+        <li>Embeds JD and resume with a small sentence-transformer model (local).</li>
+        <li>Computes semantic similarity and extracts top phrases (KeyBERT‑style).</li>
+        <li>Suggests tailored bullets and LinkedIn copy using structured templates.</li>
       </ol>
-      <p class="small mt-3">Note: This is a heuristic client‑side tool; real ATS systems vary. Always review and customize.</p>
+      <p class="small mt-3">Note: Heuristic rewriter (non‑generative) for zero cost & privacy. Results improve when you add metrics.</p>
     </section>
   </main>
 
   <footer class="max-w-6xl mx-auto px-5 pb-12 text-slate-400">
-    <div class="text-sm">Hero image source (copyable link below). If you can’t click the link for any reason, ask me to give you the link only and I will help.</div>
-    <div class="mt-2 mono text-xs break-all">
-      https://images.unsplash.com/photo-1515165562835-c4c7b052f1f4?q=80&w=1600&auto=format&fit=crop
+    <div class="text-sm">Hero image link (copyable). If you can’t click it, ask me for the link only and I’ll help.</div>
+    <div class="mt-2 text-xs break-all">
+      https://images.unsplash.com/photo-1606761568499-6d2451b23c07?q=80&w=1600&auto=format&fit=crop
     </div>
   </footer>
 
-<script>
-(function(){
-  // --- Utilities ---
-  const $ = sel => document.querySelector(sel);
-  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  <!-- Local AI (Transformers.js) -->
+  <script type="module">
+    // ---- Imports & setup (runs in the browser, no keys needed)
+    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@3.0.0';
 
-  const STOP = new Set(("a,an,and,or,but,if,then,else,when,at,from,into,by,for,with,without,of,on,off,over,under,to,in,out,up,down,as,about,is,are,was,were,be,been,being,that,this,those,these,it,its,their,there,here,such,via,per,the".split(',')));
-  const ACTION_VERBS = ["Led","Built","Drove","Launched","Owned","Architected","Automated","Optimized","Improved","Accelerated","Reduced","Increased","Consolidated","Migrated","Scaled","Delivered","Mentored","Coordinated","Implemented","Engineered","Designed","Refactored","Analyzed","Resolved","Managed","Developed","Executed","Negotiated","Prioritized","Defined","Streamlined"];
-  const SKILL_HINTS = ["python","sql","excel","tableau","powerbi","kubernetes","docker","aws","gcp","azure","javascript","typescript","react","node","java","c++","go","ml","nlp","ai","sqlite","postgres","mongodb","spark","hadoop","airflow","git","jira","salesforce","hubspot","figma","photoshop","illustrator","seo","sem","pmp","scrum","agile","kanban"];
-  const CERT_HINTS = ["pmp","csm","aws certified","azure certified","gcp professional","six sigma","cisa","cissp","security+"];
-  const ROLE_HINTS = ["product","manager","engineer","developer","data","analyst","designer","marketing","sales","operations","devops","ml","ai","platform","backend","frontend","mobile"];
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
 
-  function tokenize(txt){
-    return (txt||"")
-      .toLowerCase()
-      .replace(/[\n\r]+/g,' ')
-      .replace(/[^a-z0-9+.#/ ]/g,' ')
-      .split(/\s+/)
-      .filter(w=>w && !STOP.has(w) && w.length>2);
-  }
+    const ACTION_VERBS = ["Led","Built","Drove","Launched","Owned","Architected","Automated","Optimized","Improved","Accelerated","Reduced","Increased","Consolidated","Migrated","Scaled","Delivered","Mentored","Coordinated","Implemented","Engineered","Designed","Refactored","Analyzed","Resolved","Managed","Developed","Executed","Negotiated","Prioritized","Defined","Streamlined"];
 
-  function keywordExtract(jd){
-    const tokens = tokenize(jd);
-    const freq = new Map();
-    tokens.forEach(t => freq.set(t, (freq.get(t)||0)+1));
-    // rank by frequency + hint boost
-    const scored = Array.from(freq.entries()).map(([w,c])=>{
-      let s = c;
-      if (SKILL_HINTS.includes(w)) s += 2;
-      if (CERT_HINTS.some(h=>w.includes(h))) s += 2;
-      if (ROLE_HINTS.includes(w)) s += 1;
-      return [w,s];
-    }).sort((a,b)=>b[1]-a[1]);
-    // group into buckets
-    const top = scored.slice(0,60).map(([w])=>w);
-    const skills = top.filter(w=>SKILL_HINTS.includes(w) || /[+#]/.test(w) || /\b(sql|aws|gcp|azure|git|seo|nlp|ml)\b/.test(w));
-    const certs = top.filter(w=>CERT_HINTS.some(h=>w.includes(h)));
-    const general = top.filter(w=>!skills.includes(w) && !certs.includes(w));
-    return {skills:[...new Set(skills)], certs:[...new Set(certs)], general:[...new Set(general)]};
-  }
+    // Simple tokenization for keyword presence checks
+    const STOP = new Set(("a,an,and,or,but,if,then,else,when,at,from,into,by,for,with,without,of,on,off,over,under,to,in,out,up,down,as,about,is,are,was,were,be,been,being,the,this,that,those,these,its,it,with,via,per".split(',')));
+    const toks = t => (t||'').toLowerCase().replace(/[^a-z0-9+#./ ]/g,' ').split(/\s+/).filter(w => w && !STOP.has(w));
 
-  function presenceScore(resumeTokens, keywords){
-    const set = new Set(resumeTokens);
-    let hit = 0;
-    keywords.forEach(k => { if (set.has(k)) hit++; });
-    return keywords.length ? Math.round((hit/keywords.length)*100) : 0;
-  }
+    // Cosine similarity for vectors
+    function cosine(a, b) {
+      let dot = 0, na = 0, nb = 0;
+      for (let i = 0; i < a.length; i++) { dot += a[i]*b[i]; na += a[i]*a[i]; nb += b[i]*b[i]; }
+      return dot / (Math.sqrt(na) * Math.sqrt(nb) + 1e-9);
+    }
 
-  function densityScore(resumeTokens, keywords){
-    if (!keywords.length) return 0;
-    const counts = new Map();
-    resumeTokens.forEach(t => {
-      if (keywords.includes(t)) counts.set(t, (counts.get(t)||0)+1);
-    });
-    const vals = Array.from(counts.values());
-    if (vals.length===0) return 0;
-    const avg = vals.reduce((a,b)=>a+b,0)/keywords.length;
-    const capped = Math.min(avg/3, 1); // heuristic cap
-    return Math.round(capped*100);
-  }
+    // Sentence splitter (very simple)
+    function splitSentences(text) {
+      return (text||'')
+        .replace(/\n+/g,' ')
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim()).filter(Boolean);
+    }
 
-  function contextVerbScore(resumeText){
-    const verbs = ACTION_VERBS.map(v=>v.toLowerCase());
-    const hits = verbs.reduce((sum,v)=> sum + (resumeText.toLowerCase().match(new RegExp("\\b"+v+"\\b","g"))||[]).length, 0);
-    const ratio = Math.min(hits/10, 1);
-    return Math.round(ratio*100);
-  }
-
-  function computeATS(jd, resume){
-    const K = keywordExtract(jd);
-    const rtoks = tokenize(resume);
-    const p = presenceScore(rtoks, [...K.skills, ...K.certs, ...K.general.slice(0,10)]);
-    const d = densityScore(rtoks, K.skills);
-    const v = contextVerbScore(resume);
-    const score = Math.round(0.5*p + 0.25*d + 0.25*v); // weighted heuristic
-    return { score, K, components:{presence:p, density:d, verbs:v} };
-  }
-
-  function pills(container, items){
-    container.innerHTML = items.map(i=>`<span class="pill">${escapeHtml(i)}</span>`).join('') || `<span class="small">No gaps detected 🎉</span>`;
-  }
-
-  function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-  function suggestBullets(jd, resume, keywords){
-    const top = keywords.slice(0,8);
-    const verb = (ACTION_VERBS[Math.floor(Math.random()*ACTION_VERBS.length)]);
-    const results = [];
-    top.forEach(k=>{
-      results.push(`${verb} ${k.toUpperCase()} initiatives to [impact metric], aligning with JD focus on "${k}".`);
-    });
-    results.push("Delivered % KPI improvement by doing X using Y; partnered with Z; measured via M (aligns to JD priorities).");
-    return results.join("\n• ");
-  }
-
-  function suggestSummary(jd, resume, K){
-    const roleWords = K.general.filter(w=>ROLE_HINTS.includes(w)).slice(0,3).join(" / ");
-    const skills = K.skills.slice(0,6).map(s=>s.toUpperCase()).join(" · ");
-    return `Results-driven ${roleWords || "professional"} with strengths in ${skills || "role-aligned capabilities"}. Experience translating business goals into measurable outcomes, collaborating cross-functionally, and leveraging best practices highlighted in the JD.`;
-  }
-
-  function updateATSUI(res){
-    const {score, K, components} = res;
-    $('#atsScore').textContent = score;
-    $('#atsBar').style.width = `${score}%`;
-    $('#atsBadge').classList.add('hidden');
-    $('#atsWarn').classList.add('hidden');
-    $('#atsDanger').classList.add('hidden');
-    if (score >= 75) $('#atsBadge').classList.remove('hidden');
-    else if (score >= 45) $('#atsWarn').classList.remove('hidden');
-    else $('#atsDanger').classList.remove('hidden');
-    const hint = `Presence ${components.presence} • Density ${components.density} • Action verbs ${components.verbs}`;
-    $('#atsHint').textContent = hint;
-
-    const resumeSet = new Set(tokenize($('#resume').value));
-    const required = [...new Set([...res.K.skills, ...res.K.certs, ...res.K.general.slice(0,15)])];
-    const missing = required.filter(k=>!resumeSet.has(k));
-    pills($('#missingKeywords'), missing.slice(0,25));
-  }
-
-  function optimizeLinkedIn(jd, headline, about, skillsCsv){
-    const K = keywordExtract(jd);
-    const skills = (skillsCsv||'').split(',').map(s=>s.trim()).filter(Boolean);
-    const addSkills = K.skills.filter(s=>!skills.map(x=>x.toLowerCase()).includes(s)).slice(0,6);
-    const headlineSug = headline && headline.trim().length>0 ? headline :
-      `${(K.general.find(w=>ROLE_HINTS.includes(w))||'Professional').toString().replace(/\b\w/g,c=>c.toUpperCase())} | ${K.skills.slice(0,2).map(s=>s.toUpperCase()).join(' | ')} | Driving Outcomes`;
-    const aboutSug = (about && about.trim().length>0 ? about + "\n\n" : "") +
-`Focused on ${K.skills.slice(0,4).map(s=>s.toUpperCase()).join(', ')} with a track record of delivering measurable impact.
-Highlights:
-• Shipped projects aligning with JD themes: ${K.general.slice(0,4).join(', ')}
-• Collaborate cross‑functionally; communicate clearly with stakeholders
-• Continuous learning: ${[...K.certs.slice(0,2), 'mentoring', 'documentation'].join(', ')}
-
-Open to roles where I can apply ${K.skills.slice(0,3).join(', ')} to move key metrics.`;
-
-    const skillSug = [...new Set([...skills, ...addSkills])].slice(0,15).join(', ');
-    return {headlineSug, aboutSug, skillSug};
-  }
-
-  // --- Event wiring ---
-  $('#demoBtn').addEventListener('click', ()=>{
-    $('#jd').value = `We are seeking a Product Manager to lead AI/ML platform initiatives. Requirements include experience with Python, SQL, data pipelines, and cloud (AWS/GCP). Strong stakeholder management, Agile, Jira, and analytics background preferred. Certifications like PMP or Scrum are a plus. Responsibilities: define roadmap, collaborate with engineering, launch features, measure impact.`;
-    $('#resume').value = `Product professional with 5+ years. Led roadmap for B2B SaaS. Launched features improving activation by 18%. Worked with engineering and design. Tools: Jira, Git, Tableau. Comfortable with analytics and SQL basics.`;
-  });
-
-  $('#clearBtn').addEventListener('click', ()=>{
-    ['#jd','#resume','#tailoredSummary','#tailoredBullets','#liAbout','#liHeadline','#liSkills'].forEach(sel=>$(sel).value='');
-    $('#liSuggestions').innerHTML='';
-    $('#atsScore').textContent='—';
-    $('#atsBar').style.width = '0%';
-    $('#missingKeywords').innerHTML='';
-    $('#atsBadge').classList.add('hidden');
-    $('#atsWarn').classList.add('hidden');
-    $('#atsDanger').classList.add('hidden');
-    $('#atsHint').textContent='';
-  });
-
-  $('#analyzeBtn').addEventListener('click', ()=>{
-    const jd = $('#jd').value;
-    const resume = $('#resume').value;
-    const result = computeATS(jd, resume);
-    // attach K for updateATSUI’s missing calc
-    result.K = result.K || keywordExtract(jd);
-    updateATSUI(result);
-  });
-
-  $('#tailorBtn').addEventListener('click', ()=>{
-    const jd = $('#jd').value, resume = $('#resume').value;
-    const result = computeATS(jd, resume);
-    const K = result.K;
-    $('#tailoredSummary').value = suggestSummary(jd, resume, K);
-    const bullets = "• " + suggestBullets(jd, resume, K.skills.length ? K.skills : K.general);
-    $('#tailoredBullets').value = bullets;
-    updateATSUI(result);
-  });
-
-  // Copy buttons (with fallback)
-  $$('#tailoredSummary ~ .flex [data-copy], #tailoredBullets ~ .flex [data-copy]').forEach(btn=>{
-    btn.addEventListener('click', async (e)=>{
-      const target = e.currentTarget.getAttribute('data-copy');
-      const el = document.querySelector(target);
-      try {
-        await navigator.clipboard.writeText(el.value);
-      } catch {
-        el.select(); document.execCommand('copy');
+    // N-gram candidate generator (for KeyBERT-style keywords)
+    function candidates(text, maxN=3) {
+      const words = toks(text);
+      const cands = new Set();
+      for (let n=1; n<=maxN; n++) {
+        for (let i=0; i<=words.length-n; i++) {
+          cands.add(words.slice(i, i+n).join(' '));
+        }
       }
-      e.currentTarget.textContent='Copied ✓';
-      setTimeout(()=>e.currentTarget.textContent='Copy',1200);
+      return Array.from(cands).filter(s => s.length >= 3 && !/^\d+$/.test(s));
+    }
+
+    // MMR selection to diversify keywords
+    function selectMMR(docVec, candVecs, candList, topK=20, lambda=0.7) {
+      const selected = [];
+      const scores = candVecs.map(v => cosine(docVec, v));
+      const picked = new Set();
+      while (selected.length < Math.min(topK, candList.length)) {
+        let bestIdx = -1, bestScore = -Infinity;
+        for (let i=0; i<candList.length; i++) {
+          if (picked.has(i)) continue;
+          const relevance = scores[i];
+          let diversity = 0;
+          for (const j of selected) diversity = Math.max(diversity, cosine(candVecs[i], candVecs[j]));
+          const mmr = lambda*relevance - (1-lambda)*diversity;
+          if (mmr > bestScore) { bestScore = mmr; bestIdx = i; }
+        }
+        if (bestIdx === -1) break;
+        picked.add(bestIdx);
+        selected.push(bestIdx);
+      }
+      return selected.map(i => ({ phrase: candList[i], score: scores[i] }));
+    }
+
+    // Globals
+    let embed = null; // sentence embedding pipeline
+    let modelReady = false;
+
+    async function loadModel() {
+      try {
+        // all-MiniLM-L6-v2 equivalent hosted by Xenova; small & fast
+        embed = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+        modelReady = true;
+        $('#aiStatus').innerHTML = 'Local AI: <span class="text-green-300">ready</span> ✓';
+      } catch (e) {
+        console.error(e);
+        $('#aiStatus').innerHTML = 'Local AI: <span class="text-rose-300">failed to load</span> — falling back';
+      }
+    }
+    loadModel();
+
+    async function getEmbedding(text) {
+      // mean-pooled, normalized
+      const out = await embed(text, { pooling: 'mean', normalize: true });
+      return Array.from(out.data);
+    }
+
+    async function embedMany(list) {
+      const out = await embed(list, { pooling: 'mean', normalize: true });
+      const arr = out.data.length === out.dims ? [out.data] : Array.from({length: out.dims ? out.data.length / out.dims : list.length}, (_, i) => out.data.slice(i*out.dims, (i+1)*out.dims));
+      // If dims not provided by lib, slice evenly by list length (fallback)
+      if (!out.dims) return list.map((_, i) => Array.from(arr[i]));
+      const typed = [];
+      for (let i=0; i<list.length; i++) typed.push(Array.from(out.data.slice(i*out.dims, (i+1)*out.dims)));
+      return typed;
+    }
+
+    async function extractKeywordsJD(jd) {
+      if (!jd.trim()) return [];
+      const cands = candidates(jd, 3).slice(0, 400);
+      const [docVec, candVecs] = await Promise.all([
+        getEmbedding(jd),
+        embedMany(cands)
+      ]);
+      const ranked = selectMMR(docVec, candVecs, cands, 25, 0.75)
+        .sort((a,b)=>b.score-a.score)
+        .map(x => x.phrase);
+      // Dedup by stem-ish
+      const uniq = [];
+      const seen = new Set();
+      for (const k of ranked) {
+        const key = k.replace(/s$/,'');
+        if (!seen.has(key)) { seen.add(key); uniq.push(k); }
+      }
+      return uniq.slice(0, 20);
+    }
+
+    async function atsScoreSemantic(jd, resume) {
+      if (!jd.trim() || !resume.trim()) return { score: 0, details: 'Provide JD and resume.' };
+      const jdSents = splitSentences(jd).slice(0, 12);
+      const resSents = splitSentences(resume).slice(0, 24);
+      const [jdVecs, resVecs] = await Promise.all([embedMany(jdSents), embedMany(resSents)]);
+      // For each JD sentence, find best matching resume sentence
+      const matches = jdVecs.map(jv => Math.max(...resVecs.map(rv => cosine(jv, rv))));
+      const avg = matches.reduce((a,b)=>a+b, 0) / (matches.length || 1);
+      // Map similarity (0.0–1.0) to ATS 0–100 (simple)
+      const score = Math.round(Math.max(0, Math.min(1, (avg - 0.3) / 0.5)) * 100);
+      return {
+        score,
+        details: `Avg semantic match ${(avg*100).toFixed(1)}%`,
+      };
+    }
+
+    function pills(container, items) {
+      container.innerHTML = items.length
+        ? items.map(i => `<span class="pill">${i}</span>`).join('')
+        : `<span class="small">No obvious gaps detected 🎉</span>`;
+    }
+
+    function suggestSummary(jdKeywords, roleGuess, actionFirst) {
+      const k = jdKeywords.slice(0, 6).map(x => x.toUpperCase());
+      return `${actionFirst ? 'Action‑oriented ' : ''}${roleGuess || 'professional'} with strengths in ${k.join(' · ') || 'role‑aligned capabilities'}. Partner with cross‑functional teams to deliver measurable outcomes aligned to JD priorities.`;
+    }
+
+    function rewriteBullets(baseBullets, jdKeywords) {
+      const outs = [];
+      const verbs = ACTION_VERBS;
+      const targets = jdKeywords.slice(0, 6);
+      const src = baseBullets.length ? baseBullets : [
+        "Managed end‑to‑end feature delivery with engineering and design.",
+        "Improved key activation metrics through A/B testing.",
+        "Collaborated with stakeholders to define roadmap and priorities."
+      ];
+      for (let i=0; i<Math.min(5, src.length); i++) {
+        const v = verbs[i % verbs.length];
+        const kw = targets[i % Math.max(1, targets.length)];
+        outs.push(`${v} ${kw ? kw.toUpperCase() + ' ' : ''}initiatives to achieve [metric], leveraging ${kw || 'role skills'}; partnered with cross‑functional teams; measured via [KPI].`);
+      }
+      return "• " + outs.join("\n• ");
+    }
+
+    function guessRole(jd) {
+      const m = jd.toLowerCase().match(/\b(product|data|software|backend|frontend|ml|ai|designer|marketing|sales|devops|platform)\s+(manager|engineer|developer|analyst|designer|specialist|lead)\b/);
+      return m ? (m[0].split(' ').map(s => s[0].toUpperCase()+s.slice(1)).join(' ')) : '';
+    }
+
+    async function handleAnalyze() {
+      const jd = $('#jd').value;
+      const resume = $('#resume').value;
+
+      // Extract keywords
+      let kws = [];
+      try {
+        if (modelReady) {
+          $('#aiStatus').innerHTML = 'Local AI: <span class="text-blue-300">analyzing…</span> <span class="spinner"></span>';
+          kws = await extractKeywordsJD(jd);
+        }
+      } catch (e) { console.error(e); }
+
+      // Semantic ATS
+      let ats = { score: 0, details: 'Model not ready' };
+      try {
+        if (modelReady) ats = await atsScoreSemantic(jd, resume);
+      } catch (e) { console.error(e); }
+
+      // Presence‑based missing (cheap heuristic complement)
+      const resTok = new Set(toks(resume));
+      const missing = kws.filter(k => !k.split(' ').every(w => resTok.has(w)));
+
+      // UI updates
+      $('#atsScore').textContent = ats.score;
+      $('#atsBar').style.width = `${ats.score}%`;
+      $('#atsBadge').classList.add('hidden');
+      $('#atsWarn').classList.add('hidden');
+      $('#atsDanger').classList.add('hidden');
+      if (ats.score >= 75) $('#atsBadge').classList.remove('hidden');
+      else if (ats.score >= 45) $('#atsWarn').classList.remove('hidden');
+      else $('#atsDanger').classList.remove('hidden');
+      $('#atsHint').textContent = `${ats.details} • Keywords: ${kws.slice(0,6).join(', ')}`;
+
+      pills($('#missingKeywords'), missing.slice(0, 25));
+
+      $('#aiStatus').innerHTML = modelReady
+        ? 'Local AI: <span class="text-green-300">ready</span> ✓'
+        : 'Local AI: <span class="text-rose-300">fallback mode</span>';
+      return { kws };
+    }
+
+    async function handleTailor() {
+      const jd = $('#jd').value;
+      const resume = $('#resume').value;
+      const { kws } = await handleAnalyze();
+      const role = guessRole(jd) || 'Professional';
+
+      $('#tailoredSummary').value = suggestSummary(kws, role, $('#actionVerbs').checked);
+
+      const baseBullets = splitSentences(resume).filter(s => s.length >= 20 && s.length <= 180);
+      $('#tailoredBullets').value = rewriteBullets(baseBullets, kws);
+    }
+
+    function optimizeLinkedIn() {
+      const jd = $('#jd').value;
+      const skills = ($('#liSkills').value || '').split(',').map(s => s.trim()).filter(Boolean);
+      const role = guessRole(jd) || 'Professional';
+      const jdHints = toks(jd).slice(0, 30);
+      const top = Array.from(new Set(jdHints)).slice(0, 6);
+      const headline = $('#liHeadline').value || `${role} | ${top.slice(0,2).map(s=>s.toUpperCase()).join(' | ')} | Driving Outcomes`;
+      const about = ($('#liAbout').value || '') +
+`\n\nFocus: ${top.slice(0,4).map(s=>s.toUpperCase()).join(', ')}
+Highlights:
+• Delivered measurable impact aligned to JD themes
+• Cross‑functional collaboration and clear communication
+• Continuous learning and documentation mindset`;
+      const addSkills = top.filter(t => !skills.map(s=>s.toLowerCase()).includes(t)).slice(0, 8);
+      const mergedSkills = Array.from(new Set([...skills, ...addSkills])).join(', ');
+
+      $('#liHeadline').value = headline;
+      $('#liAbout').value = about.trim();
+      $('#liSkills').value = mergedSkills;
+
+      $('#liSuggestions').innerHTML = `
+        <div class="grid gap-3">
+          <div class="glass p-3"><div class="font-semibold mb-1">Headline</div><div class="small text-slate-200">${headline}</div></div>
+          <div class="glass p-3"><div class="font-semibold mb-1">About</div><div class="small text-slate-200 whitespace-pre-wrap">${about}</div></div>
+          <div class="glass p-3"><div class="font-semibold mb-1">Skills</div><div class="flex flex-wrap gap-2">${mergedSkills.split(',').map(s=>`<span class="pill">${s.trim()}</span>`).join('')}</div></div>
+        </div>`;
+    }
+
+    // --- Bind UI
+    $('#demoBtn').addEventListener('click', ()=>{
+      $('#jd').value = `We are seeking a Product Manager to lead AI/ML platform initiatives. Requirements include experience with Python, SQL, data pipelines, and cloud (AWS/GCP). Strong stakeholder management, Agile/Jira, and analytics background preferred. PMP or Scrum a plus. Responsibilities: define roadmap, collaborate with engineering, launch features, measure impact.`;
+      $('#resume').value = `Product Manager with 5+ years in B2B SaaS. Led roadmap and cross‑functional delivery. Launched onboarding changes improving activation by 18%. Tools: Jira, Tableau, SQL basics. Drove discovery, prioritized backlog, partnered with engineering and design.`;
     });
-  });
 
-  $('#downloadTxt').addEventListener('click', ()=>{
-    const content = [
-      "TAILORED SUMMARY:",
-      $('#tailoredSummary').value,
-      "",
-      "TAILORED BULLETS:",
-      $('#tailoredBullets').value
-    ].join("\n");
-    const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'DigiTailor_tailored_resume.txt'; a.click();
-    URL.revokeObjectURL(url);
-  });
+    $('#clearBtn').addEventListener('click', ()=>{
+      ['#jd','#resume','#tailoredSummary','#tailoredBullets','#liAbout','#liHeadline','#liSkills'].forEach(s=>$(s).value='');
+      $('#liSuggestions').innerHTML='';
+      $('#atsScore').textContent='—'; $('#atsBar').style.width='0%';
+      $('#atsBadge').classList.add('hidden'); $('#atsWarn').classList.add('hidden'); $('#atsDanger').classList.add('hidden');
+      $('#atsHint').textContent=''; $('#missingKeywords').innerHTML='';
+    });
 
-  $('#optimizeLI').addEventListener('click', ()=>{
-    const {headlineSug, aboutSug, skillSug} = optimizeLinkedIn($('#jd').value, $('#liHeadline').value, $('#liAbout').value, $('#liSkills').value);
-    $('#liHeadline').value = headlineSug;
-    $('#liAbout').value = aboutSug;
-    $('#liSkills').value = skillSug;
-    $('#liSuggestions').innerHTML = `
-      <div class="grid-auto">
-        <div class="glass p-3">
-          <div class="font-semibold mb-1">Headline Suggestion</div>
-          <div class="small text-slate-200">${escapeHtml(headlineSug)}</div>
-        </div>
-        <div class="glass p-3">
-          <div class="font-semibold mb-1">About Suggestion</div>
-          <div class="small text-slate-200 whitespace-pre-wrap">${escapeHtml(aboutSug)}</div>
-        </div>
-        <div class="glass p-3">
-          <div class="font-semibold mb-1">Skills to Add</div>
-          <div class="flex flex-wrap gap-2">${skillSug.split(',').map(s=>`<span class="pill">${escapeHtml(s.trim())}</span>`).join('')}</div>
-        </div>
-      </div>`;
-  });
+    $('#analyzeBtn').addEventListener('click', handleAnalyze);
+    $('#tailorBtn').addEventListener('click', handleTailor);
+    $('#optimizeLI').addEventListener('click', optimizeLinkedIn);
 
-  $('#copyLI').addEventListener('click', async ()=>{
-    const all = `Headline:\n${$('#liHeadline').value}\n\nAbout:\n${$('#liAbout').value}\n\nSkills:\n${$('#liSkills').value}`;
-    try { await navi
+    // Copy buttons
+    $$('#tailoredSummary ~ .flex [data-copy], #tailoredBullets ~ .flex [data-copy]').forEach(btn=>{
+      btn.addEventListener('click', async (e)=>{
+        const target = e.currentTarget.getAttribute('data-copy');
+        const el = document.querySelector(target);
+        try { await navigator.clipboard.writeText(el.value) }
+        catch { el.select(); document.execCommand('copy') }
+        e.currentTarget.textContent='Copied ✓';
+        setTimeout(()=>e.currentTarget.textContent='Copy',1200);
+      });
+    });
+
+    // Download
+    $('#downloadTxt').addEventListener('click', ()=>{
+      const content = [
+        "TAILORED SUMMARY:",
+        $('#tailoredSummary').value,
+        "",
+        "TAILORED BULLETS:",
+        $('#tailoredBullets').value
+      ].join("\n");
+      const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'DigiTailor_tailored_resume.txt'; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Keyboard flow
+    ['#jd','#resume','#liHeadline','#liAbout','#liSkills'].forEach((sel,i,arr)=>{
+      const el = $(sel);
+      el.addEventListener('keydown',(e)=>{
+        if (e.key==='Tab' && !e.shiftKey){
+          e.preventDefault();
+          const next = $(arr[(i+1)%arr.length]); next.focus();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

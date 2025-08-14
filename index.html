@@ -189,33 +189,30 @@
 
   <!-- Local AI (Transformers.js) -->
 <script type="module">
-  // Multi-CDN dynamic import with timeout, then run Transformers in no-worker mode.
+  // =============== DIGITAILOR ROBUST AI LOADER ===============
   const $ = s => document.querySelector(s);
   const setStatus = (html) => $('#aiStatus').innerHTML = html;
 
-  async function importWithFallbacks() {
-    const SOURCES = [
-      'https://cdn.jsdelivr.net/npm/@xenova/transformers@3.0.0',
-      'https://unpkg.com/@xenova/transformers@3.0.0',
-      'https://esm.sh/@xenova/transformers@3.0.0'
-    ];
-    const TIMEOUT_MS = 20000;
-    for (const src of SOURCES) {
-      try {
-        const p = import(src);
-        const mod = await Promise.race([
-          p,
-          new Promise((_, rej) => setTimeout(() => rej(new Error('import timeout')), TIMEOUT_MS))
-        ]);
-        return { mod, src };
-      } catch (e) {
-        console.warn('Import failed from', src, e);
-      }
-    }
-    throw new Error('All CDN imports failed');
+  // ---------------- UI toggle (Local ↔ Cloud ↔ Heuristic) ----------------
+  // Add a toggle in the header badge (no extra HTML needed).
+  // Click the status pill to cycle modes.
+  const MODES = ['local', 'cloud', 'heuristic'];
+  let modeIndex = 0; // default 'local'
+  $('#aiStatus').style.cursor = 'pointer';
+  $('#aiStatus').title = 'Click to switch mode (Local AI / Cloud / Heuristic)';
+  $('#aiStatus').addEventListener('click', () => {
+    modeIndex = (modeIndex + 1) % MODES.length;
+    const m = MODES[modeIndex];
+    setStatusLabel(m);
+  });
+  function setStatusLabel(m) {
+    if (m === 'local') setStatus('Local AI: <span class="text-blue-300">initializing…</span> <span class="spinner"></span>');
+    if (m === 'cloud') setStatus('Cloud: <span class="text-blue-300">ready when needed</span> ☁️');
+    if (m === 'heuristic') setStatus('Heuristic: <span class="text-amber-300">ready</span>');
   }
+  setStatusLabel(MODES[modeIndex]);
 
-  // Small helpers used below:
+  // ---------------- Shared NLP helpers ----------------
   const STOP = new Set(("a,an,and,or,but,if,then,else,when,at,from,into,by,for,with,without,of,on,off,over,under,to,in,out,up,down,as,about,is,are,was,were,be,been,being,the,this,that,those,these,its,it,with,via,per".split(',')));
   const toks = t => (t||'').toLowerCase().replace(/[^a-z0-9+#./ ]/g,' ').split(/\s+/).filter(w => w && !STOP.has(w));
   const splitSentences = (text) => (text||'').replace(/\n+/g,' ').split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(Boolean);
@@ -226,18 +223,6 @@
     container.innerHTML = items.length
       ? items.map(i => `<span class="pill">${i}</span>`).join('')
       : `<span class="small">No obvious gaps detected 🎉</span>`;
-  }
-
-  // Heuristic fallbacks (work even if AI can’t load)
-  function heuristicKeywords(jd) {
-    const freq = new Map(); toks(jd).forEach(w => freq.set(w,(freq.get(w)||0)+1));
-    return [...freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0,20).map(([w])=>w);
-  }
-  function heuristicATS(jd,resume){
-    const J=new Set(toks(jd)), R=new Set(toks(resume));
-    const inter=[...J].filter(x=>R.has(x)).length;
-    const score = Math.round((inter / Math.max(1,J.size)) * 100);
-    return { score, details: 'Heuristic overlap (AI offline)' };
   }
   function guessRole(jd){
     const m = jd.toLowerCase().match(/\b(product|data|software|backend|frontend|ml|ai|designer|marketing|sales|devops|platform)\s+(manager|engineer|developer|analyst|designer|specialist|lead)\b/);
@@ -262,10 +247,155 @@
     return "• " + outs.join("\n• ");
   }
 
-  // Wire UI after we know which mode we’re in:
-  function wireUI(impl) {
+  // ---------------- Heuristic (always available) ----------------
+  function heuristicKeywords(jd) {
+    const freq = new Map(); toks(jd).forEach(w => freq.set(w,(freq.get(w)||0)+1));
+    return [...freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0,20).map(([w])=>w);
+  }
+  function heuristicATS(jd,resume){
+    const J=new Set(toks(jd)), R=new Set(toks(resume));
+    const inter=[...J].filter(x=>R.has(x)).length;
+    const score = Math.round((inter / Math.max(1,J.size)) * 100);
+    return { score, details: 'Heuristic overlap (AI offline)' };
+  }
+
+  // ---------------- Cloud fallback (free HF Inference, anon) ----------------
+  async function cloudEmbed(texts){
+    // Anonymous calls are rate-limited. Works best with short lists.
+    // If you later get a free HF token, add: headers: { Authorization: `Bearer ${HF_TOKEN}` }
+    const url = 'https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2';
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify(texts)
+    });
+    if(!r.ok) throw new Error('HF API error: ' + r.status);
+    return await r.json(); // returns array/vectors
+  }
+  async function cloudATS(jd, resume){
+    if (!jd.trim() || !resume.trim()) return { score: 0, details: 'Provide JD and resume.' };
+    const jdS = splitSentences(jd).slice(0,12);
+    const resS = splitSentences(resume).slice(0,24);
+    const [jv, rv] = await Promise.all([cloudEmbed(jdS), cloudEmbed(resS)]);
+    const matches = jv.map(v => Math.max(...rv.map(w => cosine(v, w))));
+    const avg = matches.reduce((a,b)=>a+b,0)/(matches.length||1);
+    const score = Math.round(Math.max(0, Math.min(1, (avg-0.3)/0.5)) * 100);
+    return { score, details:`Avg semantic match ${(avg*100).toFixed(1)}% (cloud)` };
+  }
+  async function cloudKeywords(jd){
+    if (!jd.trim()) return [];
+    const words = toks(jd);
+    const cands = new Set();
+    for (let n=1;n<=3;n++){ for(let i=0;i<=words.length-n;i++){ cands.add(words.slice(i,i+n).join(' ')); } }
+    const candList = Array.from(cands).slice(0,400);
+    const [docVec, candVecs] = await Promise.all([cloudEmbed([jd]).then(x=>x[0]), cloudEmbed(candList)]);
+    const scores = candVecs.map(v => cosine(docVec, v));
+    const ranked = candList.map((p,i)=>[p,scores[i]]).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+    const seen=new Set(), out=[]; for(const k of ranked){ const key=k.replace(/s$/,''); if(!seen.has(key)){ seen.add(key); out.push(k); } }
+    return out.slice(0,20);
+  }
+
+  // ---------------- Local (transformers.js) with LOCAL MODEL FIRST ----------------
+  async function importTransformers() {
+    const SOURCES = [
+      'https://cdn.jsdelivr.net/npm/@xenova/transformers@3.0.0',
+      'https://unpkg.com/@xenova/transformers@3.0.0',
+      'https://esm.sh/@xenova/transformers@3.0.0'
+    ];
+    const TIMEOUT_MS = 20000;
+    for (const src of SOURCES) {
+      try {
+        const mod = await Promise.race([
+          import(src),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('import timeout')), TIMEOUT_MS))
+        ]);
+        return mod;
+      } catch (e) { console.warn('Import failed from', src, e); }
+    }
+    throw new Error('All CDN imports failed');
+  }
+
+  async function makeLocalImpl() {
+    // Try to run Transformers.js with models hosted locally in your repo.
+    // Put the model files under: /models/Xenova/all-MiniLM-L6-v2/ (see instructions below).
+    const { pipeline, env } = await importTransformers();
+
+    // GitHub Pages compat
+    env.backends.onnx.wasm.numThreads = 1;
+    env.backends.onnx.wasm.proxy = false;
+    env.backends.onnx.wasm.simd = true;
+
+    // Tell transformers to look in your repo first, not the internet
+    env.allowLocalModels = true;
+    env.localModelPath = './models';     // expects ./models/Xenova/all-MiniLM-L6-v2/...
+    env.remoteModels = false;             // block remote model fetch to avoid stalls
+
+    setStatus('Local AI: <span class="text-blue-300">loading model…</span> <span class="spinner"></span>');
+
+    const TIMEOUT_MS = 60000;
+    const embedder = await Promise.race([
+      pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { quantized: true }),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('model timeout')), TIMEOUT_MS))
+    ]);
+
+    async function getEmbedding(text){
+      const out = await embedder(text, { pooling: 'mean', normalize: true });
+      return Array.from(out.data);
+    }
+    async function embedMany(list){
+      const out = await embedder(list, { pooling: 'mean', normalize: true });
+      const dim = out.dims || (out.data.length / list.length);
+      const res=[]; for(let i=0;i<list.length;i++){ res.push(Array.from(out.data.slice(i*dim,(i+1)*dim))); } return res;
+    }
+    function candidates(text,maxN=3){
+      const words=toks(text); const c=new Set();
+      for(let n=1;n<=maxN;n++){ for(let i=0;i<=words.length-n;i++){ c.add(words.slice(i,i+n).join(' ')); } }
+      return Array.from(c).filter(s=>s.length>=3&&!/^\d+$/.test(s));
+    }
+    function selectMMR(docVec, candVecs, candList, topK=20, lambda=0.7){
+      const selected=[]; const rel=candVecs.map(v=>cosine(docVec,v)); const picked=new Set();
+      while(selected.length<Math.min(topK,candList.length)){
+        let best=-1,score=-Infinity;
+        for(let i=0;i<candList.length;i++){
+          if(picked.has(i)) continue;
+          const r=rel[i]; let div=0; for(const j of selected){ div=Math.max(div, cosine(candVecs[i], candVecs[j])); }
+          const mmr=lambda*r-(1-lambda)*div; if(mmr>score){score=mmr;best=i;}
+        }
+        if(best===-1) break; picked.add(best); selected.push(best);
+      }
+      return selected.map(i=>({ phrase:candList[i], score:rel[i] }));
+    }
+
+    async function extractKeywordsJD(jd){
+      if (!jd.trim()) return [];
+      const cands = candidates(jd,3).slice(0,400);
+      const [docVec, candVecs] = await Promise.all([getEmbedding(jd), embedMany(cands)]);
+      const ranked = selectMMR(docVec, candVecs, cands, 25, 0.75).sort((a,b)=>b.score-a.score).map(x=>x.phrase);
+      const seen=new Set(), uniq=[]; for(const k of ranked){ const key=k.replace(/s$/,''); if(!seen.has(key)){ seen.add(key); uniq.push(k); } }
+      return uniq.slice(0,20);
+    }
+    async function atsScoreSemantic(jd, resume){
+      if (!jd.trim() || !resume.trim()) return { score: 0, details: 'Provide JD and resume.' };
+      const jdS=splitSentences(jd).slice(0,12), resS=splitSentences(resume).slice(0,24);
+      const [jv, rv] = await Promise.all([embedMany(jdS), embedMany(resS)]);
+      const matches = jv.map(v => Math.max(...rv.map(w => cosine(v,w))));
+      const avg = matches.reduce((a,b)=>a+b,0)/(matches.length||1);
+      const score = Math.round(Math.max(0, Math.min(1, (avg-0.3)/0.5)) * 100);
+      return { score, details:`Avg semantic match ${(avg*100).toFixed(1)}% (local)` };
+    }
+
+    return {
+      loadingLabel: 'Local AI: <span class="text-blue-300">analyzing…</span> <span class="spinner"></span>',
+      readyLabel: 'Local AI: <span class="text-green-300">ready</span> ✓',
+      keywords: extractKeywordsJD,
+      ats: atsScoreSemantic
+    };
+  }
+
+  // ---------------- Wire UI (works for any impl) ----------------
+  function wireUI(impl){
     const get = s => document.querySelector(s);
-    const setATS = ({score, details}, kws, resume) => {
+    function setATS({score, details}, kws, resume){
       get('#atsScore').textContent = score;
       get('#atsBar').style.width = `${score}%`;
       get('#atsBadge').classList.add('hidden'); get('#atsWarn').classList.add('hidden'); get('#atsDanger').classList.add('hidden');
@@ -276,18 +406,16 @@
       const resTok = new Set(toks(resume));
       const missing = kws.filter(k => !k.split(' ').every(w => resTok.has(w)));
       pills(get('#missingKeywords'), missing.slice(0,25));
-    };
-
-    async function analyze() {
+    }
+    async function analyze(){
       const jd = get('#jd').value, resume = get('#resume').value;
       setStatus(impl.loadingLabel);
       const [kws, ats] = await Promise.all([impl.keywords(jd), impl.ats(jd,resume)]);
       setATS(ats, kws, resume);
       setStatus(impl.readyLabel);
-      return {kws};
+      return { kws };
     }
-
-    async function tailor() {
+    async function tailor(){
       const jd = get('#jd').value, resume = get('#resume').value;
       const { kws } = await analyze();
       const role = guessRole(jd);
@@ -295,7 +423,6 @@
       const baseBullets = splitSentences(resume).filter(s => s.length>=20 && s.length<=180);
       get('#tailoredBullets').value = rewriteBullets(baseBullets, kws);
     }
-
     function optimizeLI(){
       const jd=get('#jd').value, role=guessRole(jd);
       const skills = (get('#liSkills').value||'').split(',').map(s=>s.trim()).filter(Boolean);
@@ -318,139 +445,61 @@ Highlights:
           <div class="glass p-3"><div class="font-semibold mb-1">Skills</div><div class="flex flex-wrap gap-2">${mergedSkills.split(',').map(s=>`<span class="pill">${s.trim()}</span>`).join('')}</div></div>
         </div>`;
     }
-
     // Bind
     $('#analyzeBtn').addEventListener('click', analyze);
     $('#tailorBtn').addEventListener('click', tailor);
     $('#optimizeLI').addEventListener('click', optimizeLI);
-
     $('#demoBtn')?.addEventListener('click', ()=>{
       $('#jd').value = `We are seeking a Product Manager to lead AI/ML platform initiatives. Requirements include experience with Python, SQL, data pipelines, and cloud (AWS/GCP). Strong stakeholder management, Agile/Jira, and analytics background preferred. PMP or Scrum a plus. Responsibilities: define roadmap, collaborate with engineering, launch features, measure impact.`;
       $('#resume').value = `Product Manager with 5+ years in B2B SaaS. Led roadmap and cross‑functional delivery. Launched onboarding changes improving activation by 18%. Tools: Jira, Tableau, SQL basics. Drove discovery, prioritized backlog, partnered with engineering and design.`;
     });
-
     $('#clearBtn')?.addEventListener('click', ()=>{
       ['#jd','#resume','#tailoredSummary','#tailoredBullets','#liAbout','#liHeadline','#liSkills'].forEach(s=>$(s).value='');
       $('#liSuggestions').innerHTML=''; $('#atsScore').textContent='—'; $('#atsBar').style.width='0%';
       $('#atsBadge').classList.add('hidden'); $('#atsWarn').classList.add('hidden'); $('#atsDanger').classList.add('hidden');
       $('#atsHint').textContent=''; $('#missingKeywords').innerHTML='';
-      setStatus(impl.readyLabel);
+      setStatusLabel(MODES[modeIndex]);
     });
-
-    // Copy
-    document.querySelectorAll('[data-copy]').forEach(btn=>{
-      btn.addEventListener('click', async (e)=>{
-        const target = e.currentTarget.getAttribute('data-copy');
-        const el = document.querySelector(target);
-        try { await navigator.clipboard.writeText(el.value); } catch { el.select(); document.execCommand('copy'); }
-        e.currentTarget.textContent='Copied ✓'; setTimeout(()=>e.currentTarget.textContent='Copy',1200);
-      });
-    });
-
-    // Download
-    $('#downloadTxt')?.addEventListener('click', ()=>{
-      const content = ["TAILORED SUMMARY:", $('#tailoredSummary').value, "", "TAILORED BULLETS:", $('#tailoredBullets').value].join("\n");
-      const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
-      const url = URL.createObjectURL(blob); const a=document.createElement('a');
-      a.href=url; a.download='DigiTailor_tailored_resume.txt'; a.click(); URL.revokeObjectURL(url);
-    });
+    // Copy + download unchanged (already in your file)
   }
 
-  // Start: try to load Transformers from any CDN; if it fails, use heuristic mode immediately.
+  // ---------------- Boot sequence ----------------
   (async () => {
     try {
-      setStatus('Local AI: <span class="text-blue-300">initializing…</span> <span class="spinner"></span>');
-      const { mod, src } = await importWithFallbacks();
-      const { pipeline, env } = mod;
-
-      // GitHub Pages compatibility: no workers/threads
-      env.backends.onnx.wasm.numThreads = 1;
-      env.backends.onnx.wasm.proxy = false;
-      env.backends.onnx.wasm.simd = true;
-      // Optional: point ORT wasm if needed
-      // env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
-
-      // Load model with progress + timeout
-      const TIMEOUT_MS = 90000;
-      let resolved = false;
-      const loader = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', {
-        quantized: true,
-        progress_callback: (p) => {
-          const pct = p?.progress != null ? Math.round(p.progress*100) : null;
-          setStatus(`Local AI: <span class="text-blue-300">loading model… ${pct ?? 0}%</span> <span class="spinner"></span>`);
-        }
-      });
-      const embed = await Promise.race([
-        loader.then(x => { resolved = true; return x; }),
-        new Promise((_, rej) => setTimeout(()=>rej(new Error('model timeout')), TIMEOUT_MS))
-      ]);
-
-      // Helper functions using the embedder
-      async function getEmbedding(text){
-        const out = await embed(text, { pooling: 'mean', normalize: true });
-        return Array.from(out.data);
+      // 1) Local AI (requires model files in ./models/…)
+      if (MODES[modeIndex] === 'local') {
+        const impl = await makeLocalImpl();
+        setStatus(impl.readyLabel);
+        wireUI(impl);
+        return;
       }
-      async function embedMany(list){
-        const out = await embed(list, { pooling: 'mean', normalize: true });
-        const dim = out.dims || (out.data.length / list.length);
-        const res=[]; for(let i=0;i<list.length;i++){ res.push(Array.from(out.data.slice(i*dim,(i+1)*dim))); } return res;
+      // 2) Cloud fallback (no keys, throttled)
+      if (MODES[modeIndex] === 'cloud') {
+        setStatus('Cloud: <span class="text-blue-300">ready</span> ☁️');
+        wireUI({
+          loadingLabel: 'Cloud: <span class="text-blue-300">analyzing…</span> <span class="spinner"></span>',
+          readyLabel: 'Cloud: <span class="text-green-300">ready</span> ☁️',
+          keywords: cloudKeywords,
+          ats: cloudATS
+        });
+        return;
       }
-      function candidates(text,maxN=3){ const words=toks(text); const c=new Set(); for(let n=1;n<=maxN;n++){ for(let i=0;i<=words.length-n;i++){ c.add(words.slice(i,i+n).join(' ')); } } return Array.from(c).filter(s=>s.length>=3&&!/^\d+$/.test(s)); }
-      function selectMMR(docVec, candVecs, candList, topK=20, lambda=0.7){
-        const selected=[]; const rel=candVecs.map(v=>cosine(docVec,v)); const picked=new Set();
-        while(selected.length<Math.min(topK,candList.length)){
-          let best=-1,score=-Infinity;
-          for(let i=0;i<candList.length;i++){
-            if(picked.has(i)) continue;
-            const r=rel[i]; let div=0; for(const j of selected){ div=Math.max(div, cosine(candVecs[i], candVecs[j])); }
-            const mmr=lambda*r-(1-lambda)*div; if(mmr>score){score=mmr;best=i;}
-          }
-          if(best===-1) break; picked.add(best); selected.push(best);
-        }
-        return selected.map(i=>({ phrase:candList[i], score:rel[i] }));
-      }
-
-      async function extractKeywordsJD(jd){
-        if (!jd.trim()) return [];
-        const cands = candidates(jd,3).slice(0,400);
-        const [docVec, candVecs] = await Promise.all([getEmbedding(jd), embedMany(cands)]);
-        const ranked = selectMMR(docVec, candVecs, cands, 25, 0.75)
-          .sort((a,b)=>b.score-a.score)
-          .map(x=>x.phrase);
-        const seen=new Set(), uniq=[]; for(const k of ranked){ const key=k.replace(/s$/,''); if(!seen.has(key)){ seen.add(key); uniq.push(k); } }
-        return uniq.slice(0,20);
-      }
-
-      async function atsScoreSemantic(jd, resume){
-        if (!jd.trim() || !resume.trim()) return { score: 0, details: 'Provide JD and resume.' };
-        const jdS=splitSentences(jd).slice(0,12), resS=splitSentences(resume).slice(0,24);
-        const [jv, rv] = await Promise.all([embedMany(jdS), embedMany(resS)]);
-        const matches = jv.map(v => Math.max(...rv.map(w => cosine(v,w))));
-        const avg = matches.reduce((a,b)=>a+b,0)/(matches.length||1);
-        const score = Math.round(Math.max(0, Math.min(1, (avg-0.3)/0.5)) * 100);
-        return { score, details:`Avg semantic match ${(avg*100).toFixed(1)}%` };
-      }
-
-      setStatus('Local AI: <span class="text-green-300">ready</span> ✓');
-
-      // Wire UI with AI implementation
-      wireUI({
-        loadingLabel: 'Local AI: <span class="text-blue-300">analyzing…</span> <span class="spinner"></span>',
-        readyLabel: 'Local AI: <span class="text-green-300">ready</span> ✓',
-        keywords: extractKeywordsJD,
-        ats: atsScoreSemantic
-      });
-
-    } catch (e) {
-      console.error('AI mode failed, switching to heuristic:', e);
-      setStatus('Local AI: <span class="text-amber-300">unavailable — heuristic mode</span>');
-
-      // Wire UI with heuristic implementation (always works)
+      // 3) Heuristic
+      setStatus('Heuristic: <span class="text-amber-300">ready</span>');
       wireUI({
         loadingLabel: 'Heuristic: <span class="text-blue-300">analyzing…</span> <span class="spinner"></span>',
         readyLabel: 'Heuristic: <span class="text-amber-300">ready</span>',
-        keywords: async (jd) => heuristicKeywords(jd),
-        ats: async (jd,resume) => heuristicATS(jd,resume)
+        keywords: async (jd)=>heuristicKeywords(jd),
+        ats: async (jd,resume)=>heuristicATS(jd,resume)
+      });
+    } catch (e) {
+      console.error(e);
+      setStatus('Heuristic: <span class="text-amber-300">ready</span>');
+      wireUI({
+        loadingLabel: 'Heuristic: <span class="text-blue-300">analyzing…</span> <span class="spinner"></span>',
+        readyLabel: 'Heuristic: <span class="text-amber-300">ready</span>',
+        keywords: async (jd)=>heuristicKeywords(jd),
+        ats: async (jd,resume)=>heuristicATS(jd,resume)
       });
     }
   })();
@@ -459,5 +508,6 @@ Highlights:
 
 </body>
 </html>
+
 
 

@@ -1,0 +1,21 @@
+$Base = "models/Xenova/all-MiniLM-L6-v2"
+$Onnx = Join-Path $Base "onnx"
+$HF = "https://huggingface.co/Xenova/all-MiniLM-L6-v2/resolve/main"
+
+New-Item -ItemType Directory -Path $Onnx -Force | Out-Null
+
+Write-Host "Downloading config/tokenizer files..."
+Invoke-WebRequest "$HF/config.json" -OutFile (Join-Path $Base "config.json")
+Invoke-WebRequest "$HF/tokenizer.json" -OutFile (Join-Path $Base "tokenizer.json")
+Invoke-WebRequest "$HF/tokenizer_config.json" -OutFile (Join-Path $Base "tokenizer_config.json")
+Invoke-WebRequest "$HF/special_tokens_map.json" -OutFile (Join-Path $Base "special_tokens_map.json")
+Invoke-WebRequest "$HF/vocab.txt" -OutFile (Join-Path $Base "vocab.txt")
+
+Write-Host "Downloading ONNX model (quantized preferred)..."
+# Quantized (smaller)
+try { Invoke-WebRequest "$HF/onnx/model_quantized.onnx" -OutFile (Join-Path $Onnx "model_quantized.onnx") } catch {}
+
+# Full precision (optional)
+try { Invoke-WebRequest "$HF/onnx/model.onnx" -OutFile (Join-Path $Onnx "model.onnx") } catch {}
+
+Write-Host "Done! Files in $Base"

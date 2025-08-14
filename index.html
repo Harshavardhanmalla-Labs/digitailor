@@ -188,308 +188,272 @@
   </footer>
 
   <!-- Local AI (Transformers.js) -->
-  <script type="module">
-    // ---- Imports & setup (runs in the browser, no keys needed)
-    import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@3.0.0';
+<script type="module">
+  import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@3.0.0';
 
-    const $ = s => document.querySelector(s);
-    const $$ = s => Array.from(document.querySelectorAll(s));
+  // ---- GitHub Pages compatibility: disable workers, single-thread WASM
+  env.backends.onnx.wasm.numThreads = 1;     // avoid SharedArrayBuffer requirement
+  env.backends.onnx.wasm.proxy = false;      // don't spawn a web worker
+  env.backends.onnx.wasm.simd = true;        // keep SIMD if available
+  // (Optional) explicitly set wasm assets location if needed:
+  // env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
 
-    const ACTION_VERBS = ["Led","Built","Drove","Launched","Owned","Architected","Automated","Optimized","Improved","Accelerated","Reduced","Increased","Consolidated","Migrated","Scaled","Delivered","Mentored","Coordinated","Implemented","Engineered","Designed","Refactored","Analyzed","Resolved","Managed","Developed","Executed","Negotiated","Prioritized","Defined","Streamlined"];
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
 
-    // Simple tokenization for keyword presence checks
-    const STOP = new Set(("a,an,and,or,but,if,then,else,when,at,from,into,by,for,with,without,of,on,off,over,under,to,in,out,up,down,as,about,is,are,was,were,be,been,being,the,this,that,those,these,its,it,with,via,per".split(',')));
-    const toks = t => (t||'').toLowerCase().replace(/[^a-z0-9+#./ ]/g,' ').split(/\s+/).filter(w => w && !STOP.has(w));
+  // UI helpers
+  function setStatus(html){ $('#aiStatus').innerHTML = html; }
+  function pills(container, items){
+    container.innerHTML = items.length
+      ? items.map(i => `<span class="pill">${i}</span>`).join('')
+      : `<span class="small">No obvious gaps detected 🎉</span>`;
+  }
 
-    // Cosine similarity for vectors
-    function cosine(a, b) {
-      let dot = 0, na = 0, nb = 0;
-      for (let i = 0; i < a.length; i++) { dot += a[i]*b[i]; na += a[i]*a[i]; nb += b[i]*b[i]; }
-      return dot / (Math.sqrt(na) * Math.sqrt(nb) + 1e-9);
-    }
+  // ------- Model load with progress + timeout
+  let embed = null;
+  let modelReady = false;
+  let timedOut = false;
 
-    // Sentence splitter (very simple)
-    function splitSentences(text) {
-      return (text||'')
-        .replace(/\n+/g,' ')
-        .split(/(?<=[.!?])\s+/)
-        .map(s => s.trim()).filter(Boolean);
-    }
+  async function loadModel() {
+    try {
+      setStatus('Local AI: <span class="text-blue-300">loading model… 0%</span> <span class="spinner"></span>');
 
-    // N-gram candidate generator (for KeyBERT-style keywords)
-    function candidates(text, maxN=3) {
-      const words = toks(text);
-      const cands = new Set();
-      for (let n=1; n<=maxN; n++) {
-        for (let i=0; i<=words.length-n; i++) {
-          cands.add(words.slice(i, i+n).join(' '));
+      // Hard timeout so UI won’t hang forever
+      const timeout = new Promise((_, rej) => setTimeout(() => {
+        timedOut = true;
+        rej(new Error('Model load timeout'));
+      }, 60000)); // 60s
+
+      const loader = pipeline(
+        'feature-extraction',
+        // Small, fast, quantized sentence-embedder hosted by Xenova
+        'Xenova/all-MiniLM-L6-v2',
+        {
+          quantized: true,
+          progress_callback: (p) => {
+            // p: { status, progress, file }
+            const pct = p?.progress != null ? Math.round(p.progress * 100) : null;
+            setStatus(
+              'Local AI: <span class="text-blue-300">'
+              + (pct !== null ? `loading model… ${pct}%` : 'loading model…')
+              + '</span> <span class="spinner"></span>'
+            );
+          }
         }
+      );
+
+      embed = await Promise.race([loader, timeout]);
+      modelReady = true;
+      setStatus('Local AI: <span class="text-green-300">ready</span> ✓');
+    } catch (e) {
+      console.error('Model load failed:', e);
+      if (timedOut) {
+        setStatus('Local AI: <span class="text-amber-300">slow network — fallback mode</span>');
+      } else {
+        setStatus('Local AI: <span class="text-rose-300">failed — fallback mode</span>');
       }
-      return Array.from(cands).filter(s => s.length >= 3 && !/^\d+$/.test(s));
+      modelReady = false; // we’ll still run heuristics
     }
+  }
+  loadModel();
 
-    // MMR selection to diversify keywords
-    function selectMMR(docVec, candVecs, candList, topK=20, lambda=0.7) {
-      const selected = [];
-      const scores = candVecs.map(v => cosine(docVec, v));
-      const picked = new Set();
-      while (selected.length < Math.min(topK, candList.length)) {
-        let bestIdx = -1, bestScore = -Infinity;
-        for (let i=0; i<candList.length; i++) {
-          if (picked.has(i)) continue;
-          const relevance = scores[i];
-          let diversity = 0;
-          for (const j of selected) diversity = Math.max(diversity, cosine(candVecs[i], candVecs[j]));
-          const mmr = lambda*relevance - (1-lambda)*diversity;
-          if (mmr > bestScore) { bestScore = mmr; bestIdx = i; }
-        }
-        if (bestIdx === -1) break;
-        picked.add(bestIdx);
-        selected.push(bestIdx);
+  // ------- NLP utils (same as before)
+  const ACTION_VERBS = ["Led","Built","Drove","Launched","Owned","Architected","Automated","Optimized","Improved","Accelerated","Reduced","Increased","Consolidated","Migrated","Scaled","Delivered","Mentored","Coordinated","Implemented","Engineered","Designed","Refactored","Analyzed","Resolved","Managed","Developed","Executed","Negotiated","Prioritized","Defined","Streamlined"];
+  const STOP = new Set(("a,an,and,or,but,if,then,else,when,at,from,into,by,for,with,without,of,on,off,over,under,to,in,out,up,down,as,about,is,are,was,were,be,been,being,the,this,that,those,these,its,it,with,via,per".split(',')));
+  const toks = t => (t||'').toLowerCase().replace(/[^a-z0-9+#./ ]/g,' ').split(/\s+/).filter(w => w && !STOP.has(w));
+  const splitSentences = (text) => (text||'').replace(/\n+/g,' ').split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(Boolean);
+  const cosine = (a,b)=>{let d=0,na=0,nb=0;for(let i=0;i<a.length;i++){d+=a[i]*b[i];na+=a[i]*a[i];nb+=b[i]*b[i]}return d/(Math.sqrt(na)*Math.sqrt(nb)+1e-9);};
+  const candidates = (text,maxN=3)=>{const words=toks(text);const c=new Set();for(let n=1;n<=maxN;n++){for(let i=0;i<=words.length-n;i++){c.add(words.slice(i,i+n).join(' '));}}return Array.from(c).filter(s=>s.length>=3&&!/^\d+$/.test(s));};
+
+  async function getEmbedding(text){
+    // mean pooled, normalized vector
+    const out = await embed(text, { pooling: 'mean', normalize: true });
+    return Array.from(out.data);
+  }
+  async function embedMany(list){
+    const out = await embed(list, { pooling: 'mean', normalize: true });
+    const dim = out.dims || (out.data.length / list.length);
+    const res=[]; for(let i=0;i<list.length;i++){ res.push(Array.from(out.data.slice(i*dim,(i+1)*dim))); } return res;
+  }
+
+  function selectMMR(docVec, candVecs, candList, topK=20, lambda=0.7){
+    const selected=[]; const rel=candVecs.map(v=>cosine(docVec,v)); const picked=new Set();
+    while(selected.length<Math.min(topK,candList.length)){
+      let best=-1,score=-Infinity;
+      for(let i=0;i<candList.length;i++){
+        if(picked.has(i)) continue;
+        const r=rel[i]; let div=0;
+        for(const j of selected){ div = Math.max(div, cosine(candVecs[i], candVecs[j])); }
+        const mmr=lambda*r-(1-lambda)*div; if(mmr>score){score=mmr;best=i;}
       }
-      return selected.map(i => ({ phrase: candList[i], score: scores[i] }));
+      if(best===-1) break; picked.add(best); selected.push(best);
     }
+    return selected.map(i=>({ phrase:candList[i], score:rel[i] }));
+  }
 
-    // Globals
-    let embed = null; // sentence embedding pipeline
-    let modelReady = false;
-
-    async function loadModel() {
-      try {
-        // all-MiniLM-L6-v2 equivalent hosted by Xenova; small & fast
-        embed = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-        modelReady = true;
-        $('#aiStatus').innerHTML = 'Local AI: <span class="text-green-300">ready</span> ✓';
-      } catch (e) {
-        console.error(e);
-        $('#aiStatus').innerHTML = 'Local AI: <span class="text-rose-300">failed to load</span> — falling back';
-      }
+  async function extractKeywordsJD(jd){
+    if (!jd.trim()) return [];
+    if (!modelReady) {
+      // Heuristic fallback: most frequent tokens
+      const freq = new Map(); toks(jd).forEach(w => freq.set(w,(freq.get(w)||0)+1));
+      return [...freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0,20).map(([w])=>w);
     }
-    loadModel();
+    const cands = candidates(jd,3).slice(0,400);
+    const [docVec, candVecs] = await Promise.all([getEmbedding(jd), embedMany(cands)]);
+    const ranked = selectMMR(docVec, candVecs, cands, 25, 0.75)
+      .sort((a,b)=>b.score-a.score)
+      .map(x=>x.phrase);
+    // light dedupe
+    const seen=new Set(); const uniq=[];
+    for (const k of ranked){ const key=k.replace(/s$/,''); if(!seen.has(key)){ seen.add(key); uniq.push(k); } }
+    return uniq.slice(0,20);
+  }
 
-    async function getEmbedding(text) {
-      // mean-pooled, normalized
-      const out = await embed(text, { pooling: 'mean', normalize: true });
-      return Array.from(out.data);
+  async function atsScoreSemantic(jd, resume){
+    if (!jd.trim() || !resume.trim()) return { score: 0, details: 'Provide JD and resume.' };
+    if (!modelReady) {
+      // Fallback: overlap score
+      const J=new Set(toks(jd)), R=new Set(toks(resume));
+      const inter=[...J].filter(x=>R.has(x)).length;
+      const score = Math.round((inter / Math.max(1,J.size)) * 100);
+      return { score, details: 'Heuristic overlap (AI offline)' };
     }
+    const jdS=splitSentences(jd).slice(0,12), resS=splitSentences(resume).slice(0,24);
+    const [jv, rv] = await Promise.all([embedMany(jdS), embedMany(resS)]);
+    const matches = jv.map(v => Math.max(...rv.map(w => cosine(v,w))));
+    const avg = matches.reduce((a,b)=>a+b,0)/(matches.length||1);
+    const score = Math.round(Math.max(0, Math.min(1, (avg-0.3)/0.5)) * 100);
+    return { score, details:`Avg semantic match ${(avg*100).toFixed(1)}%` };
+  }
 
-    async function embedMany(list) {
-      const out = await embed(list, { pooling: 'mean', normalize: true });
-      const arr = out.data.length === out.dims ? [out.data] : Array.from({length: out.dims ? out.data.length / out.dims : list.length}, (_, i) => out.data.slice(i*out.dims, (i+1)*out.dims));
-      // If dims not provided by lib, slice evenly by list length (fallback)
-      if (!out.dims) return list.map((_, i) => Array.from(arr[i]));
-      const typed = [];
-      for (let i=0; i<list.length; i++) typed.push(Array.from(out.data.slice(i*out.dims, (i+1)*out.dims)));
-      return typed;
+  function guessRole(jd){
+    const m = jd.toLowerCase().match(/\b(product|data|software|backend|frontend|ml|ai|designer|marketing|sales|devops|platform)\s+(manager|engineer|developer|analyst|designer|specialist|lead)\b/);
+    return m ? m[0].replace(/\b\w/g,c=>c.toUpperCase()) : 'Professional';
+  }
+  function suggestSummary(kws, role, action){
+    const k=kws.slice(0,6).map(x=>x.toUpperCase());
+    return `${action?'Action‑oriented ':''}${role} with strengths in ${k.join(' · ')||'role‑aligned capabilities'}. Delivers measurable outcomes aligned to JD priorities through cross‑functional collaboration.`;
+  }
+  function rewriteBullets(baseBullets, kws){
+    const verbs = ACTION_VERBS, targets = kws.slice(0,6);
+    const src = baseBullets.length ? baseBullets : [
+      "Managed end‑to‑end delivery with engineering and design.",
+      "Improved activation via experiments and insights.",
+      "Collaborated with stakeholders to define roadmap."
+    ];
+    const outs=[];
+    for(let i=0;i<Math.min(5,src.length);i++){
+      const v=verbs[i%verbs.length], kw=targets[i%Math.max(1,targets.length)];
+      outs.push(`${v} ${kw?kw.toUpperCase()+' ':''}initiatives to achieve [metric], leveraging ${kw||'role skills'}; partnered cross‑functionally; measured via [KPI].`);
     }
+    return "• " + outs.join("\n• ");
+  }
 
-    async function extractKeywordsJD(jd) {
-      if (!jd.trim()) return [];
-      const cands = candidates(jd, 3).slice(0, 400);
-      const [docVec, candVecs] = await Promise.all([
-        getEmbedding(jd),
-        embedMany(cands)
-      ]);
-      const ranked = selectMMR(docVec, candVecs, cands, 25, 0.75)
-        .sort((a,b)=>b.score-a.score)
-        .map(x => x.phrase);
-      // Dedup by stem-ish
-      const uniq = [];
-      const seen = new Set();
-      for (const k of ranked) {
-        const key = k.replace(/s$/,'');
-        if (!seen.has(key)) { seen.add(key); uniq.push(k); }
-      }
-      return uniq.slice(0, 20);
-    }
+  async function handleAnalyze(){
+    const jd=$('#jd').value, resume=$('#resume').value;
 
-    async function atsScoreSemantic(jd, resume) {
-      if (!jd.trim() || !resume.trim()) return { score: 0, details: 'Provide JD and resume.' };
-      const jdSents = splitSentences(jd).slice(0, 12);
-      const resSents = splitSentences(resume).slice(0, 24);
-      const [jdVecs, resVecs] = await Promise.all([embedMany(jdSents), embedMany(resSents)]);
-      // For each JD sentence, find best matching resume sentence
-      const matches = jdVecs.map(jv => Math.max(...resVecs.map(rv => cosine(jv, rv))));
-      const avg = matches.reduce((a,b)=>a+b, 0) / (matches.length || 1);
-      // Map similarity (0.0–1.0) to ATS 0–100 (simple)
-      const score = Math.round(Math.max(0, Math.min(1, (avg - 0.3) / 0.5)) * 100);
-      return {
-        score,
-        details: `Avg semantic match ${(avg*100).toFixed(1)}%`,
-      };
-    }
+    // show "analyzing" status if model ready
+    if (modelReady) setStatus('Local AI: <span class="text-blue-300">analyzing…</span> <span class="spinner"></span>');
 
-    function pills(container, items) {
-      container.innerHTML = items.length
-        ? items.map(i => `<span class="pill">${i}</span>`).join('')
-        : `<span class="small">No obvious gaps detected 🎉</span>`;
-    }
+    const [kws, ats] = await Promise.all([
+      extractKeywordsJD(jd),
+      atsScoreSemantic(jd, resume)
+    ]);
 
-    function suggestSummary(jdKeywords, roleGuess, actionFirst) {
-      const k = jdKeywords.slice(0, 6).map(x => x.toUpperCase());
-      return `${actionFirst ? 'Action‑oriented ' : ''}${roleGuess || 'professional'} with strengths in ${k.join(' · ') || 'role‑aligned capabilities'}. Partner with cross‑functional teams to deliver measurable outcomes aligned to JD priorities.`;
-    }
+    // Presence-based missing (complement)
+    const resTok = new Set(toks(resume));
+    const missing = kws.filter(k => !k.split(' ').every(w => resTok.has(w)));
 
-    function rewriteBullets(baseBullets, jdKeywords) {
-      const outs = [];
-      const verbs = ACTION_VERBS;
-      const targets = jdKeywords.slice(0, 6);
-      const src = baseBullets.length ? baseBullets : [
-        "Managed end‑to‑end feature delivery with engineering and design.",
-        "Improved key activation metrics through A/B testing.",
-        "Collaborated with stakeholders to define roadmap and priorities."
-      ];
-      for (let i=0; i<Math.min(5, src.length); i++) {
-        const v = verbs[i % verbs.length];
-        const kw = targets[i % Math.max(1, targets.length)];
-        outs.push(`${v} ${kw ? kw.toUpperCase() + ' ' : ''}initiatives to achieve [metric], leveraging ${kw || 'role skills'}; partnered with cross‑functional teams; measured via [KPI].`);
-      }
-      return "• " + outs.join("\n• ");
-    }
+    // Update UI
+    $('#atsScore').textContent = ats.score;
+    $('#atsBar').style.width = `${ats.score}%`;
+    $('#atsBadge').classList.add('hidden'); $('#atsWarn').classList.add('hidden'); $('#atsDanger').classList.add('hidden');
+    if (ats.score >= 75) $('#atsBadge').classList.remove('hidden');
+    else if (ats.score >= 45) $('#atsWarn').classList.remove('hidden');
+    else $('#atsDanger').classList.remove('hidden');
+    $('#atsHint').textContent = `${ats.details} • Keywords: ${kws.slice(0,6).join(', ')}`;
+    pills($('#missingKeywords'), missing.slice(0,25));
 
-    function guessRole(jd) {
-      const m = jd.toLowerCase().match(/\b(product|data|software|backend|frontend|ml|ai|designer|marketing|sales|devops|platform)\s+(manager|engineer|developer|analyst|designer|specialist|lead)\b/);
-      return m ? (m[0].split(' ').map(s => s[0].toUpperCase()+s.slice(1)).join(' ')) : '';
-    }
+    setStatus(modelReady ? 'Local AI: <span class="text-green-300">ready</span> ✓' : 'Local AI: <span class="text-amber-300">fallback (no AI)</span>');
+    return { kws };
+  }
 
-    async function handleAnalyze() {
-      const jd = $('#jd').value;
-      const resume = $('#resume').value;
+  async function handleTailor(){
+    const jd=$('#jd').value, resume=$('#resume').value;
+    const { kws } = await handleAnalyze();
+    const role = guessRole(jd);
+    const baseBullets = splitSentences(resume).filter(s => s.length>=20 && s.length<=180);
+    $('#tailoredSummary').value = suggestSummary(kws, role, $('#actionVerbs').checked);
+    $('#tailoredBullets').value = rewriteBullets(baseBullets, kws);
+  }
 
-      // Extract keywords
-      let kws = [];
-      try {
-        if (modelReady) {
-          $('#aiStatus').innerHTML = 'Local AI: <span class="text-blue-300">analyzing…</span> <span class="spinner"></span>';
-          kws = await extractKeywordsJD(jd);
-        }
-      } catch (e) { console.error(e); }
-
-      // Semantic ATS
-      let ats = { score: 0, details: 'Model not ready' };
-      try {
-        if (modelReady) ats = await atsScoreSemantic(jd, resume);
-      } catch (e) { console.error(e); }
-
-      // Presence‑based missing (cheap heuristic complement)
-      const resTok = new Set(toks(resume));
-      const missing = kws.filter(k => !k.split(' ').every(w => resTok.has(w)));
-
-      // UI updates
-      $('#atsScore').textContent = ats.score;
-      $('#atsBar').style.width = `${ats.score}%`;
-      $('#atsBadge').classList.add('hidden');
-      $('#atsWarn').classList.add('hidden');
-      $('#atsDanger').classList.add('hidden');
-      if (ats.score >= 75) $('#atsBadge').classList.remove('hidden');
-      else if (ats.score >= 45) $('#atsWarn').classList.remove('hidden');
-      else $('#atsDanger').classList.remove('hidden');
-      $('#atsHint').textContent = `${ats.details} • Keywords: ${kws.slice(0,6).join(', ')}`;
-
-      pills($('#missingKeywords'), missing.slice(0, 25));
-
-      $('#aiStatus').innerHTML = modelReady
-        ? 'Local AI: <span class="text-green-300">ready</span> ✓'
-        : 'Local AI: <span class="text-rose-300">fallback mode</span>';
-      return { kws };
-    }
-
-    async function handleTailor() {
-      const jd = $('#jd').value;
-      const resume = $('#resume').value;
-      const { kws } = await handleAnalyze();
-      const role = guessRole(jd) || 'Professional';
-
-      $('#tailoredSummary').value = suggestSummary(kws, role, $('#actionVerbs').checked);
-
-      const baseBullets = splitSentences(resume).filter(s => s.length >= 20 && s.length <= 180);
-      $('#tailoredBullets').value = rewriteBullets(baseBullets, kws);
-    }
-
-    function optimizeLinkedIn() {
-      const jd = $('#jd').value;
-      const skills = ($('#liSkills').value || '').split(',').map(s => s.trim()).filter(Boolean);
-      const role = guessRole(jd) || 'Professional';
-      const jdHints = toks(jd).slice(0, 30);
-      const top = Array.from(new Set(jdHints)).slice(0, 6);
-      const headline = $('#liHeadline').value || `${role} | ${top.slice(0,2).map(s=>s.toUpperCase()).join(' | ')} | Driving Outcomes`;
-      const about = ($('#liAbout').value || '') +
+  function optimizeLinkedIn(){
+    const jd=$('#jd').value, role=guessRole(jd);
+    const skills = ($('#liSkills').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const jdHints = Array.from(new Set(toks(jd))).slice(0,30);
+    const top = jdHints.slice(0,6);
+    const headline = $('#liHeadline').value || `${role} | ${top.slice(0,2).map(s=>s.toUpperCase()).join(' | ')} | Driving Outcomes`;
+    const about = ($('#liAbout').value||'') +
 `\n\nFocus: ${top.slice(0,4).map(s=>s.toUpperCase()).join(', ')}
 Highlights:
 • Delivered measurable impact aligned to JD themes
 • Cross‑functional collaboration and clear communication
 • Continuous learning and documentation mindset`;
-      const addSkills = top.filter(t => !skills.map(s=>s.toLowerCase()).includes(t)).slice(0, 8);
-      const mergedSkills = Array.from(new Set([...skills, ...addSkills])).join(', ');
+    const addSkills = top.filter(t => !skills.map(s=>s.toLowerCase()).includes(t)).slice(0,8);
+    const mergedSkills = Array.from(new Set([...skills, ...addSkills])).join(', ');
+    $('#liHeadline').value = headline; $('#liAbout').value = about.trim(); $('#liSkills').value = mergedSkills;
+    $('#liSuggestions').innerHTML = `
+      <div class="grid gap-3">
+        <div class="glass p-3"><div class="font-semibold mb-1">Headline</div><div class="small text-slate-200">${headline}</div></div>
+        <div class="glass p-3"><div class="font-semibold mb-1">About</div><div class="small text-slate-200 whitespace-pre-wrap">${about}</div></div>
+        <div class="glass p-3"><div class="font-semibold mb-1">Skills</div><div class="flex flex-wrap gap-2">${mergedSkills.split(',').map(s=>`<span class="pill">${s.trim()}</span>`).join('')}</div></div>
+      </div>`;
+  }
 
-      $('#liHeadline').value = headline;
-      $('#liAbout').value = about.trim();
-      $('#liSkills').value = mergedSkills;
+  // ---- Wire up UI (same IDs as your page)
+  $('#analyzeBtn').addEventListener('click', handleAnalyze);
+  $('#tailorBtn').addEventListener('click', handleTailor);
+  $('#optimizeLI').addEventListener('click', optimizeLinkedIn);
 
-      $('#liSuggestions').innerHTML = `
-        <div class="grid gap-3">
-          <div class="glass p-3"><div class="font-semibold mb-1">Headline</div><div class="small text-slate-200">${headline}</div></div>
-          <div class="glass p-3"><div class="font-semibold mb-1">About</div><div class="small text-slate-200 whitespace-pre-wrap">${about}</div></div>
-          <div class="glass p-3"><div class="font-semibold mb-1">Skills</div><div class="flex flex-wrap gap-2">${mergedSkills.split(',').map(s=>`<span class="pill">${s.trim()}</span>`).join('')}</div></div>
-        </div>`;
-    }
+  $('#demoBtn')?.addEventListener('click', ()=>{
+    $('#jd').value = `We are seeking a Product Manager to lead AI/ML platform initiatives. Requirements include experience with Python, SQL, data pipelines, and cloud (AWS/GCP). Strong stakeholder management, Agile/Jira, and analytics background preferred. PMP or Scrum a plus. Responsibilities: define roadmap, collaborate with engineering, launch features, measure impact.`;
+    $('#resume').value = `Product Manager with 5+ years in B2B SaaS. Led roadmap and cross‑functional delivery. Launched onboarding changes improving activation by 18%. Tools: Jira, Tableau, SQL basics. Drove discovery, prioritized backlog, partnered with engineering and design.`;
+  });
 
-    // --- Bind UI
-    $('#demoBtn').addEventListener('click', ()=>{
-      $('#jd').value = `We are seeking a Product Manager to lead AI/ML platform initiatives. Requirements include experience with Python, SQL, data pipelines, and cloud (AWS/GCP). Strong stakeholder management, Agile/Jira, and analytics background preferred. PMP or Scrum a plus. Responsibilities: define roadmap, collaborate with engineering, launch features, measure impact.`;
-      $('#resume').value = `Product Manager with 5+ years in B2B SaaS. Led roadmap and cross‑functional delivery. Launched onboarding changes improving activation by 18%. Tools: Jira, Tableau, SQL basics. Drove discovery, prioritized backlog, partnered with engineering and design.`;
+  $('#clearBtn')?.addEventListener('click', ()=>{
+    ['#jd','#resume','#tailoredSummary','#tailoredBullets','#liAbout','#liHeadline','#liSkills'].forEach(s=>$(s).value='');
+    $('#liSuggestions').innerHTML=''; $('#atsScore').textContent='—'; $('#atsBar').style.width='0%';
+    $('#atsBadge').classList.add('hidden'); $('#atsWarn').classList.add('hidden'); $('#atsDanger').classList.add('hidden');
+    $('#atsHint').textContent=''; $('#missingKeywords').innerHTML='';
+  });
+
+  // Copy buttons
+  $$('#tailoredSummary ~ .flex [data-copy], #tailoredBullets ~ .flex [data-copy]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const target = e.currentTarget.getAttribute('data-copy');
+      const el = document.querySelector(target);
+      try { await navigator.clipboard.writeText(el.value) } catch { el.select(); document.execCommand('copy') }
+      e.currentTarget.textContent='Copied ✓'; setTimeout(()=>e.currentTarget.textContent='Copy',1200);
     });
+  });
 
-    $('#clearBtn').addEventListener('click', ()=>{
-      ['#jd','#resume','#tailoredSummary','#tailoredBullets','#liAbout','#liHeadline','#liSkills'].forEach(s=>$(s).value='');
-      $('#liSuggestions').innerHTML='';
-      $('#atsScore').textContent='—'; $('#atsBar').style.width='0%';
-      $('#atsBadge').classList.add('hidden'); $('#atsWarn').classList.add('hidden'); $('#atsDanger').classList.add('hidden');
-      $('#atsHint').textContent=''; $('#missingKeywords').innerHTML='';
+  // Download
+  $('#downloadTxt')?.addEventListener('click', ()=>{
+    const content = ["TAILORED SUMMARY:", $('#tailoredSummary').value, "", "TAILORED BULLETS:", $('#tailoredBullets').value].join("\n");
+    const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download='DigiTailor_tailored_resume.txt'; a.click(); URL.revokeObjectURL(url);
+  });
+
+  // Keyboard flow
+  ['#jd','#resume','#liHeadline','#liAbout','#liSkills'].forEach((sel,i,arr)=>{
+    const el = $(sel);
+    el?.addEventListener('keydown',(e)=>{
+      if (e.key==='Tab' && !e.shiftKey){ e.preventDefault(); const next=$(arr[(i+1)%arr.length]); next?.focus(); }
     });
+  });
+</script>
 
-    $('#analyzeBtn').addEventListener('click', handleAnalyze);
-    $('#tailorBtn').addEventListener('click', handleTailor);
-    $('#optimizeLI').addEventListener('click', optimizeLinkedIn);
-
-    // Copy buttons
-    $$('#tailoredSummary ~ .flex [data-copy], #tailoredBullets ~ .flex [data-copy]').forEach(btn=>{
-      btn.addEventListener('click', async (e)=>{
-        const target = e.currentTarget.getAttribute('data-copy');
-        const el = document.querySelector(target);
-        try { await navigator.clipboard.writeText(el.value) }
-        catch { el.select(); document.execCommand('copy') }
-        e.currentTarget.textContent='Copied ✓';
-        setTimeout(()=>e.currentTarget.textContent='Copy',1200);
-      });
-    });
-
-    // Download
-    $('#downloadTxt').addEventListener('click', ()=>{
-      const content = [
-        "TAILORED SUMMARY:",
-        $('#tailoredSummary').value,
-        "",
-        "TAILORED BULLETS:",
-        $('#tailoredBullets').value
-      ].join("\n");
-      const blob = new Blob([content], {type:'text/plain;charset=utf-8'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'DigiTailor_tailored_resume.txt'; a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    // Keyboard flow
-    ['#jd','#resume','#liHeadline','#liAbout','#liSkills'].forEach((sel,i,arr)=>{
-      const el = $(sel);
-      el.addEventListener('keydown',(e)=>{
-        if (e.key==='Tab' && !e.shiftKey){
-          e.preventDefault();
-          const next = $(arr[(i+1)%arr.length]); next.focus();
-        }
-      });
-    });
-  </script>
 </body>
 </html>
+

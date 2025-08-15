@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-[#0b1220] text-white font-inter">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkedIn Optimizer – DigiTailor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex flex-col min-h-screen">
+  <!-- Header -->
+  <header class="bg-white/10 backdrop-blur sticky top-0 z-10 p-4 flex items-center justify-between">
+    <img src="Logo_Big.png" alt="DigiTailor Logo" class="h-8" />
+    <nav class="space-x-4">
+      <a href="/" class="hover:underline">Home</a>
+      <a href="/ats.html" class="hover:underline">ATS Scanner</a>
+      <a href="/tailor.html" class="hover:underline">Resume Tailor</a>
+      <a href="/linkedin.html" class="hover:underline font-bold">LinkedIn Optimizer</a>
+    </nav>
+  </header>
+
+  <!-- Main -->
+  <main class="p-6 max-w-4xl mx-auto flex flex-col gap-8">
+    <h1 class="text-3xl font-bold">LinkedIn Optimizer</h1>
+
+    <div class="space-y-4">
+      <div>
+        <label for="jd" class="block font-semibold mb-1">Job Description</label>
+        <textarea id="jd" rows="6" class="w-full p-3 rounded bg-white/10 outline-none resize-none" placeholder="Paste job description..."></textarea>
+      </div>
+      <div>
+        <label for="headline" class="block font-semibold mb-1">Your LinkedIn Headline</label>
+        <input id="headline" class="w-full p-3 rounded bg-white/10 outline-none" placeholder="Optional: paste your current headline" />
+      </div>
+      <div>
+        <label for="about" class="block font-semibold mb-1">Your LinkedIn About</label>
+        <textarea id="about" rows="4" class="w-full p-3 rounded bg-white/10 outline-none resize-none" placeholder="Optional: paste your current About summary"></textarea>
+      </div>
+      <div>
+        <label for="skills" class="block font-semibold mb-1">Your Skills (comma-separated)</label>
+        <input id="skills" class="w-full p-3 rounded bg-white/10 outline-none" placeholder="e.g., Python, SQL, Communication" />
+      </div>
+
+      <button id="optimizeBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-full font-semibold">
+        Optimize
+      </button>
+    </div>
+
+    <div id="output" class="hidden mt-6 space-y-6">
+      <div>
+        <h2 class="text-xl font-bold mb-2">Optimized Headline</h2>
+        <div id="optHeadline" class="bg-white/10 p-4 rounded"></div>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold mb-2">Optimized About</h2>
+        <div id="optAbout" class="bg-white/10 p-4 rounded whitespace-pre-line"></div>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold mb-2">Optimized Skills</h2>
+        <div id="optSkills" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-auto bg-white/10 text-center py-4 text-sm">
+    © 2025 DigiTailor Team — All rights reserved.
+  </footer>
+
+  <script type="module">
+    const el = id => document.getElementById(id);
+
+    el("optimizeBtn").addEventListener("click", async () => {
+      const jd = el("jd").value;
+      const headline = el("headline").value;
+      const about = el("about").value;
+      const skills = el("skills").value;
+
+      const res = await fetch("/api/linkedin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jd, headline, about, skills: skills.split(",").map(s => s.trim()) }),
+      });
+
+      const data = await res.json();
+      el("output").classList.remove("hidden");
+      el("optHeadline").textContent = data.headline;
+      el("optAbout").textContent = data.about;
+      el("optSkills").innerHTML = data.skills
+        .split(",")
+        .map(s => `<span class="pill">${s.trim()}</span>`)
+        .join(" ");
+    });
+  </script>
+</body>
+</html>

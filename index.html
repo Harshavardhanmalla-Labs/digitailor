@@ -3,146 +3,120 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Digitailor • Theme Gallery</title>
-  <meta name="description" content="Browse our collection of professionally designed, ATS-ready resume templates." />
+  <title>Photo Gallery</title>
   <style>
-    :root{
-      --bg:#0b0f14;
-      --card:#111723;
-      --muted:#8aa1b1;
-      --text:#e6eef5;
-      --brand:#3b82f6;
-      --brand-2:#22c55e;
-      --accent:#f59e0b;
-      --border:#1f2a37;
-      --radius:16px;
-      --shadow:0 10px 30px rgba(0,0,0,.35);
-      --maxw:1120px;
+    /* Basic Setup */
+    :root {
+      --bg: #101010;
+      --card-bg: #1a1a1a;
+      --text: #f0f0f0;
+      --border: #333;
+      --shadow: 0 8px 24px rgba(0,0,0,.5);
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Helvetica,Arial,sans-serif;
-      color:var(--text); background:radial-gradient(1200px 600px at 20% -10%, rgba(59,130,246,.12), transparent 60%),
-        radial-gradient(1200px 600px at 80% 10%, rgba(34,197,94,.10), transparent 60%), var(--bg);
+    * {
+      box-sizing: border-box;
     }
-    a{color:var(--brand); text-decoration:none}
-    a:hover{text-decoration:underline}
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
 
-    /* Header */
-    header{position:sticky; top:0; z-index:30; backdrop-filter:saturate(140%) blur(12px); background:rgba(11,15,20,.65); border-bottom:1px solid var(--border)}
-    .nav{max-width:var(--maxw); margin:auto; display:flex; align-items:center; gap:18px; padding:14px 20px}
-    .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px}
-    .brand .logo{width:28px; height:28px; border-radius:8px; background:conic-gradient(from 180deg, var(--brand), var(--brand-2), var(--accent), var(--brand)); box-shadow:var(--shadow)}
-    .spacer{flex:1}
-    .btn{display:inline-flex; align-items:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid var(--border); background:linear-gradient(180deg, #16202e, #111723); color:#fff; box-shadow:var(--shadow)}
-    .btn.primary{background:linear-gradient(180deg, #2563eb, #1d4ed8); border-color:#1e40af}
-    .btn:hover{filter:brightness(1.05)}
+    /* Gallery Title */
+    .header {
+      text-align: center;
+      padding: 40px 20px;
+    }
+    .header h1 {
+      font-size: 3em;
+      margin: 0;
+    }
+    .header p {
+      font-size: 1.2em;
+      color: #aaa;
+    }
 
-    /* Gallery */
-    .wrap{max-width:var(--maxw); margin:0 auto; padding:40px 20px 60px}
-    .section-title{margin:0 0 24px; font-size:clamp(28px, 3.6vw, 44px); text-align:center}
-    .sub-title{color:var(--muted); font-size:18px; max-width:720px; margin:-12px auto 32px; text-align:center}
-    .gallery{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:24px}
-    .theme-card{border:1px solid var(--border); background:var(--card); border-radius:var(--radius); overflow:hidden; transition: transform .2s ease, box-shadow .2s ease;}
-    .theme-card:hover{transform: translateY(-5px); box-shadow: var(--shadow);}
-    .theme-card .thumb{aspect-ratio:4/3; background:linear-gradient(160deg, rgba(59,130,246,.15), rgba(34,197,94,.12)); border-bottom:1px solid var(--border); display:grid; place-items:center; font-size:14px; color:var(--muted)}
-    .theme-card .meta{padding:16px}
-    .theme-card h3{margin:0 0 8px; font-size:18px}
-    .pill{display:inline-block; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid var(--border); background:rgba(255,255,255,.03)}
+    /* The Responsive Grid Gallery */
+    .gallery-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      /* This creates a responsive grid. It will fit as many 300px columns as it can. */
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px; /* The space between photos */
+    }
 
-    /* Footer */
-    footer{border-top:1px solid var(--border); margin-top:40px; padding:20px; color:var(--muted)}
-
-    @media (max-width:960px){
-      .nav ul{display:none}
+    /* Individual Photo Styling */
+    .gallery-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden; /* This keeps the image corners rounded */
+      background: var(--card-bg);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .gallery-item:hover {
+      transform: scale(1.03); /* Slightly enlarges the photo on hover */
+      box-shadow: var(--shadow);
+    }
+    .gallery-item img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* This makes sure the image covers the box without stretching */
+      aspect-ratio: 1 / 1; /* Makes all photos square. Change to 16 / 9 for widescreen, etc. */
     }
   </style>
 </head>
 <body>
-  <header>
-    <nav class="nav" aria-label="Primary">
-      <div class="brand"><span class="logo" aria-hidden="true"></span> Digitailor</div>
-      <div class="spacer"></div>
-      <a class="btn" href="#">Sign in</a>
-      <a class="btn primary" href="#">Create Resume</a>
-    </nav>
+
+  <header class="header">
+    <h1>My Gallery</h1>
+    <p>A collection of my favorite photos.</p>
   </header>
 
   <main>
-    <section class="wrap" id="templates">
-      <h1 class="section-title">Resume Templates</h1>
-      <p class="sub-title">Browse our collection of recruiter-tested, ATS-friendly resume templates. Find the perfect design to showcase your skills and experience.</p>
-      <div class="gallery">
-        <article class="theme-card">
-          <div class="thumb">Theme Preview</div>
-          <div class="meta">
-            <h3>Classic</h3>
-            <span class="pill">Popular</span>
-          </div>
-        </article>
-        <article class="theme-card">
-            <div class="thumb">Theme Preview</div>
-            <div class="meta">
-              <h3>Professional</h3>
-              <span class="pill">Recruiter-tested</span>
-            </div>
-          </article>
-        <article class="theme-card">
-            <div class="thumb">Theme Preview</div>
-            <div class="meta">
-                <h3>Prime ATS</h3>
-                <span class="pill">ATS-Ready</span>
-            </div>
-        </article>
-        <article class="theme-card">
-            <div class="thumb">Theme Preview</div>
-            <div class="meta">
-                <h3>Clean</h3>
-                <span class="pill">Minimal</span>
-            </div>
-        </article>
-        <article class="theme-card">
-            <div class="thumb">Theme Preview</div>
-            <div class="meta">
-                <h3>Modern</h3>
-                <span class="pill">Sleek</span>
-            </div>
-        </article>
-        <article class="theme-card">
-            <div class="thumb">Theme Preview</div>
-            <div class="meta">
-                <h3>Balanced</h3>
-                <span class="pill">Versatile</span>
-            </div>
-        </article>
-        <article class="theme-card">
-            <div class="thumb">Theme Preview</div>
-            <div class="meta">
-                <h3>Executive</h3>
-                <span class="pill">Senior</span>
-            </div>
-        </article>
-        <article class="theme-card">
-            <div class="thumb">Theme Preview</div>
-            <div class="meta">
-                <h3>Minimalist</h3>
-                <span class="pill">Clean</span>
-            </div>
-        </article>
+    <div class="gallery-container">
+      <!-- ROW 1 -->
+      <div class="gallery-item">
+        <img src="assets/photo1.jpg" alt="Description of photo 1">
       </div>
-    </section>
+      <div class="gallery-item">
+        <img src="assets/photo2.jpg" alt="Description of photo 2">
+      </div>
+      <div class="gallery-item">
+        <img src="assets/photo3.jpg" alt="Description of photo 3">
+      </div>
+
+      <!-- ROW 2 -->
+      <div class="gallery-item">
+        <img src="assets/photo4.jpg" alt="Description of photo 4">
+      </div>
+      <div class="gallery-item">
+        <img src="assets/photo5.jpg" alt="Description of photo 5">
+      </div>
+      <div class="gallery-item">
+        <img src="assets/photo6.jpg" alt="Description of photo 6">
+      </div>
+
+      <!-- ROW 3 -->
+      <div class="gallery-item">
+        <img src="assets/photo7.jpg" alt="Description of photo 7">
+      </div>
+      <div class="gallery-item">
+        <img src="assets/photo8.jpg" alt="Description of photo 8">
+      </div>
+      <div class="gallery-item">
+        <img src="assets/photo9.jpg" alt="Description of photo 9">
+      </div>
+      
+      <!-- Last Photo -->
+      <div class="gallery-item">
+        <img src="assets/photo10.jpg" alt="Description of photo 10">
+      </div>
+    </div>
   </main>
 
-  <footer>
-    <div style="max-width:var(--maxw); margin:auto; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap">
-      <div>© <span id="year"></span> Digitailor. All rights reserved.</div>
-      <div><a href="#">Privacy</a> · <a href="#">Terms</a></div>
-    </div>
-  </footer>
-
-  <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
-  </script>
 </body>
 </html>
